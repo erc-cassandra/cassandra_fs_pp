@@ -44,10 +44,8 @@ setup(
     url="https://www.github.com/erc-cassandra",
     author="Andrew Tedstone",
     license="BSD-3",
-    packages=["fs_pp"]
-    install_requires=[
-        "pandas",
-    ],
+    packages=["cassandra_fs_pp"],
+    install_requires=["pandas"],
     scripts=["bin/fs_process_l1.py"],
     zip_safe=False,
     classifiers=[
