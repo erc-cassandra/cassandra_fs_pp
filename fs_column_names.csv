@@ -1,0 +1,8 @@
+level0, level12
+"DTC1\([0-9]+\)", "DTC1_*(C)"
+"DTC2(*)", "DTC2_*(C)"
+"TCDT", "TCDT(m)"
+"TDR*_VWC", "TDR*_VWC(m3/m3)"
+"TDR*_EC", "TDR*_EC(dS/m)"
+"TDR*_T", "TDR*_T(C)"
+"TDR*_Period", "TDR*_Period(uS)"
