@@ -11,6 +11,7 @@ import pandas as pd
 import tomli
 import os
 import logging
+import re
 
 REQUIRED_CONFIG_KEYS = ['site']
 REQUIRED_CONFIG_L0_KEYS = ['header', 'skiprows', 'index_col']
@@ -49,8 +50,6 @@ class fs():
         """
         with open(config_file, "rb") as f:
             conf = tomli.load(f)
-
-        print(conf)
 
         # Check required fields are present        
         for field in REQUIRED_CONFIG_KEYS:
@@ -179,6 +178,10 @@ class fs():
         self,
         mapping : str | None=None,
         ) -> None:
+        """
+        A level-2 operation.
+
+        """
 
         if mapping is None:
             _module_path = os.path.dirname(__file__)
@@ -188,19 +191,34 @@ class fs():
         mapping.index = mapping['level0']
 
         new_mapping = {}
-        for mapp in mapping.iterrows():
-            cols = self.ds.filter(regex=mapp.index, axis=1)
+        for ix, mapp in mapping.iterrows():
+            print(ix)
+            filtered = self.ds_level1.filter(regex=ix, axis=1)
+            cols = filtered.columns
+            print(cols, len(cols))
+            
+            # 'Array'-type variables (e.g. DTC)
             if len(cols) > 1:
-                for col in cols.columns:
+                for col in cols:
+                    print(col)
                     # Get sensor number
-                    res = re.search('\((?P<id>[0-9+])\)$', col)
+                    # First try array-type variable
+                    res = re.search('\((?P<id>[0-9]+)\)$', col)
+                    if res == None:
+                        # If that doesn't work, try generic multiple type
+                        res = re.search('[A-Za-z]+(?P<id>[0-9]+)\_', col)
+                    if res == None:
+                        print('Could not find sensor ID.')
+                        raise ValueError
+
                     sensor_id = res.groupdict()['id']
                     # Mapping to be supplied to df.rename()
-                    renumber = re.compile(mapp.level1)
+                    print(mapp)
+                    renumber = re.compile(mapp.loc['level2'])
                     new_mapping[col] = renumber.sub('\*', sensor_id)
-            elif len(matches) == 1:
-                col = cols.columns[0]
-                new_mapping[col] = mapp.level1
+            elif len(cols) == 1:
+                col = cols[0]
+                new_mapping[col] = mapp.iloc[0]
             else:
                 continue
 

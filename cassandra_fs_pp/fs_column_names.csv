@@ -1,0 +1,8 @@
+level0,level2
+DTC1\([0-9]+\),DTC1_*(C)
+DTC1\([0-9]+\),DTC2_*(C)
+TCDT,TCDT(m)
+TDR([0-9]+)_VWC,TDR*_VWC(m3/m3)
+TDR([0-9]+)_EC,TDR*_EC(dS/m)
+TDR([0-9]+)_T,TDR*_T(C)
+TDR([0-9]+)_Period,TDR*_Period(uS)

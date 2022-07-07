@@ -46,7 +46,7 @@ dtc2.first_sensor=false
 # ---------------------------------------------------------------------------- #
 [level0]
 [level0.fielddata_202107]
-subpath="FS1/"
+subpath=""
 type="bales"
 bales_start=1
 bales_stop=3
