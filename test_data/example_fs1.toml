@@ -1,0 +1,53 @@
+# ---------------------------------------------------------------------------- #
+# Site configuration
+# ---------------------------------------------------------------------------- #
+site="FS1_example"
+
+
+# ---------------------------------------------------------------------------- #
+# Level-0 to Level-1
+# ---------------------------------------------------------------------------- #
+[level0_1]
+skiprows=[0,2,3]
+header=0
+index_col='TIMESTAMP'
+na_values=['NAN']
+dtc1_info="fielddata_202107/FS1_DTC1_DiagSettings.dat"
+dtc2_info=false
+
+
+# ---------------------------------------------------------------------------- #
+# Level-1 to Level-2
+# ---------------------------------------------------------------------------- #
+[level1_2]
+# General syntax for this section:
+# key = [ [date, measurement], ..., [date, measurement]]
+
+# Distance from bottom of UDG rim to surface
+# Add a new row when UDG position changes (e.g. pole extension).
+udg_to_surface=[[2021-04-30, 2.06]]
+
+# Depth of installed TDR.
+# Add a new row whenever TDR position changes/if TDR ID number redeployed.
+tdr1.depth=[[2021-04-30, 0.48]]
+tdr2.depth=[[2021-04-30, 1.15]]
+tdr3.depth=[[2021-04-30, 1.36]]
+
+# Date, number, height above surface of first sensor within the tube (DTC1).
+dtc1.first_sensor=[[2021-04-01, 1, 1.30]]
+
+# Date, number, depth of burial in the sub-surface (DTC2).
+dtc2.first_sensor=false
+
+
+# ---------------------------------------------------------------------------- #
+# Level-0 datasets
+# You may override [level0_1] options in here on a per-dataset basis.
+# ---------------------------------------------------------------------------- #
+[level0]
+[level0.fielddata_202107]
+subpath="FS1/"
+type="bales"
+bales_start=1
+bales_stop=3
+    
