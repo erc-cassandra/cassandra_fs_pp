@@ -1,0 +1,6 @@
+"TOA5","FS1","CR800","44870","CR800.Std.32.03","CPU:firn_station.CR8","20701","DTC1_DiagSettings"
+"TIMESTAMP","RECORD","DTC1_SensorPositions(1)","DTC1_SensorPositions(2)","DTC1_SensorPositions(3)","DTC1_SensorPositions(4)","DTC1_SensorPositions(5)","DTC1_SensorPositions(6)","DTC1_SensorPositions(7)","DTC1_SensorPositions(8)","DTC1_SensorPositions(9)","DTC1_SensorPositions(10)","DTC1_SensorPositions(11)","DTC1_SensorPositions(12)"
+"TS","RN","mm","mm","mm","mm","mm","mm","mm","mm","mm","mm","mm","mm"
+"","","Smp","Smp","Smp","Smp","Smp","Smp","Smp","Smp","Smp","Smp","Smp","Smp"
+"2021-04-11 16:45:00",0,0,150,300,450,600,750,900,1050,1200,1350,1500,1650
+"2021-04-30 17:30:00",1,0,150,300,450,600,750,900,1050,1200,1350,1500,1650
