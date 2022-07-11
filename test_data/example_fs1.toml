@@ -25,19 +25,22 @@ dtc2_info=false
 
 # Distance from bottom of UDG rim to surface
 # Add a new row when UDG position changes (e.g. pole extension).
-udg_to_surface=[[2021-04-30, 2.06]]
+udg_key='TCDT(m)'
+udg_to_surface=[[2021-04-30, 2.06], [2021-05-02T22:00:00, 1.81]]
 
 # Depth of installed TDR.
-# Add a new row whenever TDR position changes/if TDR ID number redeployed.
-tdr1.depth=[[2021-04-30, 0.48]]
-tdr2.depth=[[2021-04-30, 1.15]]
-tdr3.depth=[[2021-04-30, 1.36]]
+tdr1.depth=[2021-04-30, 0.48]
+tdr2.depth=[2021-04-30, 1.15]
+tdr3.depth=[2021-04-30, 1.36]
 
 # Date, number, height above surface of first sensor within the tube (DTC1).
 dtc1.first_sensor=[[2021-04-01, 1, 1.30]]
 
 # Date, number, depth of burial in the sub-surface (DTC2).
 dtc2.first_sensor=false
+
+# Columns in Level-1 that should be removed from Level-2.
+remove_columns=["RECORD", "BattV_Min", "PTemp_C_Min", "Q", "DT"]
 
 
 # ---------------------------------------------------------------------------- #
