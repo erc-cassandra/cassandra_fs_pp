@@ -238,8 +238,6 @@ class fs():
         for ix, mapp in mapping.iterrows():
             filtered = self.ds_level1.filter(regex=ix, axis=1)
             cols = filtered.columns
-
-            print(ix,mapp,cols)
             
             # 'Array'-type variables (e.g. DTC)
             if len(cols) > 1:
@@ -261,7 +259,7 @@ class fs():
                     new_mapping[col] = renumber.sub(sensor_id, mapp.loc['level2'])
             elif len(cols) == 1:
                 col = cols[0]
-                new_mapping[col] = mapp.iloc[0]
+                new_mapping[col] = mapp.iloc[1]
             else:
                 continue
 
