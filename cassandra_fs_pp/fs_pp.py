@@ -12,12 +12,27 @@ import tomli
 import os
 import logging
 import re
+import copy
+import numpy as np
+
+import pdb
+from importlib import reload
 
 REQUIRED_CONFIG_KEYS = ['site']
 REQUIRED_CONFIG_L0_KEYS = ['header', 'skiprows', 'index_col']
 
-class fs():
+def pairwise(lst):
+    """ yield item i and item i+1 in lst. e.g.
+        (lst[0], lst[1]), (lst[1], lst[2]), ..., (lst[-1], None)
+    """
+    if not lst: return
+    #yield None, lst[0]
+    for i in range(len(lst)-1):
+        yield lst[i], lst[i+1]
+    yield lst[-1], None
 
+
+class fs():
     
     config = None
     data_root = None
@@ -74,7 +89,7 @@ class fs():
             store.append(sds)
 
         ds = pd.concat(store, axis=0)
-        ds = ds.sort_index()
+        #ds = ds.sort_index()
         self.ds_level1 = ds
         return ds
 
@@ -108,9 +123,34 @@ class fs():
         """
         assert(type(self.ds_level1) is pd.DataFrame)
         if outpath is None:
-            outpath = os.path.join(self.data_root, 'level-1', '')
+            outpath = self._get_level1_default_path()
         self.ds_level1.to_csv(outpath)
         return
+
+
+    def load_level1_dataset(
+        self,
+        dataset : str | None=None
+        ) -> pd.DataFrame():
+        """
+        Load a Level-1 processed file.
+        Primarily useful if seeking to run only Level-2 processing.
+
+        :param dataset: path/filename of file to load. If None then attempts
+        to find from the data_root.
+        """
+        if dataset is None:
+            dataset = self._get_level1_default_path()
+        self.ds_level1 = pd.read_csv(dataset, parse_dates=True, 
+            index_col=self.config['level0_1']['index_col'])
+        return
+
+
+    def _get_level1_default_path(self) -> None:
+        """
+        Default location of level-1 dataset.
+        """
+        return os.path.join(self.data_root, 'level-1', self.config['site'] + '.csv')
 
 
     def _concat_bale(
@@ -174,33 +214,37 @@ class fs():
         return data
 
 
-    def _rename_columns(
+    def _define_l2_column_names(
         self,
-        mapping : str | None=None,
-        ) -> None:
+        mapping_file : str | None=None,
+        ) -> dict:
         """
         A level-2 operation.
+        Creates mapping dict old:new to be supplied to df.rename().
+
+        :param mapping_file: filename of old->new regexes. By default
+        uses the file contained within the repository.
 
         """
 
-        if mapping is None:
+        if mapping_file is None:
             _module_path = os.path.dirname(__file__)
-            mapping = os.path.join(_module_path, 'fs_column_names.csv')
+            mapping_file = os.path.join(_module_path, 'fs_column_names.csv')
 
-        mapping = pd.read_csv(mapping)
+        mapping = pd.read_csv(mapping_file)
         mapping.index = mapping['level0']
 
         new_mapping = {}
         for ix, mapp in mapping.iterrows():
-            print(ix)
             filtered = self.ds_level1.filter(regex=ix, axis=1)
             cols = filtered.columns
-            print(cols, len(cols))
+
+            print(ix,mapp,cols)
             
             # 'Array'-type variables (e.g. DTC)
             if len(cols) > 1:
                 for col in cols:
-                    print(col)
+                    #print(col)
                     # Get sensor number
                     # First try array-type variable
                     res = re.search('\((?P<id>[0-9]+)\)$', col)
@@ -212,10 +256,9 @@ class fs():
                         raise ValueError
 
                     sensor_id = res.groupdict()['id']
-                    # Mapping to be supplied to df.rename()
-                    print(mapp)
-                    renumber = re.compile(mapp.loc['level2'])
-                    new_mapping[col] = renumber.sub('\*', sensor_id)
+
+                    renumber = re.compile('\*')
+                    new_mapping[col] = renumber.sub(sensor_id, mapp.loc['level2'])
             elif len(cols) == 1:
                 col = cols[0]
                 new_mapping[col] = mapp.iloc[0]
@@ -223,6 +266,139 @@ class fs():
                 continue
 
         return new_mapping
+
+    
+    def level1_to_level2(
+        self
+        ) -> None:
+        """
+        Process Level-1 data to Level-2
+        """
+
+        l2_udg = self._normalise_udg()
+        
+        for tdr in tdrs:
+            l2_tdrn_depth = _calculate_tdr(depth(tdr))
+        
+        l2_ec_depth = _calculate_ec_depths()
+        l2_ec_mS = _calibrate_ec()
+        
+        for dtc in dtcs:
+            l2_dtc_depth = _calculate_dtc_depths(dtc)
+
+
+        ## Now apply modifications to dataframe
+        # Start with a copy of level1 ds
+        level2 = copy.copy(self.ds_level1)
+
+        # Delete unwanted columns
+        for c in self.config['level1_2']['remove_columns']:
+            level2 = level2.drop(c, axis='columns')
+
+        # Overwrite mV EC with mS EC
+
+        # Add depth columns - in a sensible order!
+
+        # Actually, consider doing this as netcdf with proper coordinates per variable !
+
+
+    def _normalise_udg(
+        self,
+        udg : pd.Series | None=None
+        ) -> pd.Series:
+        """
+        Stitch jumps in UDG record
+        Zeroes off the series relative to the first record.
+
+        Requires level-1 data in memory.
+        """
+        if udg is None:
+            udg_key = 'TCDT'
+            udg = copy.deepcopy(self.ds_level1[udg_key])
+
+        changes = self.config['level1_2']['udg_to_surface']
+        if len(changes) == 1:
+            changes.append(-999)
+        changes_it = pairwise(changes)
+
+        for change, next_change in changes_it:
+            if change == -999:
+                break
+            date, new_height = change
+            if next_change == -999:
+                udg.loc[date:] -= new_height
+            else:
+                next_date, next_height = next_change
+                udg.loc[date:next_date] -= new_height
+
+        return udg
+
+
+    def _filter_udg(
+        self,
+        udg : pd.Series | None=None,
+        med_window : str='1D',
+        threshold : float=0.1
+        ) -> pd.Series:
+        """
+        Apply filtering strategies to UDG: remove Campbell Sci bad values and
+        do temporal median filtering.
+
+        Always relies on 'Q' column of self.ds_level1.
+
+        Note that the UDG record is likely to benefit from further smoothing,
+        depending on the desired application.
+
+        :param udg: Series of UDG values. If not provided defaults to self.ds_level1.
+        :param med_window: temporal window over which to calculate rolling median.
+        :param threshold: absolute difference from median to tolerate.
+
+        """
+        if udg is None:
+            udg_key = 'TCDT'
+            udg = copy.deepcopy(self.ds_level1[udg_key])
+
+        # Only retain data with quality flag according to SR50A manual
+        udg = udg.where(self.ds_level1['Q'] > 150).where(self.ds_level1['Q'] <= 210)
+        # Remove high-frequency "problems"
+        med = udg.rolling(med_window).median()
+        filt = udg.where(np.abs(med-udg) < threshold)
+        return filt
+
+
+    def _calculate_tdr_depth(
+        self,
+        tdr : int
+        ) -> None:
+        """
+        Calculate time-varying depth of a TDR with respect to surface UDG.
+
+        :param tdr: number of the TDR.
+        """
+        key = 'tdr%s.depth' %tdr
+        udg = self.config['level1_2']['udg_key']
+        ts_depths = self.ds_level1[udg]
+        for period in itertools.pairwise(self.config['level1_2'][key]):
+            start_depth = period[1]
+            offset = ts_depths.loc[period[0], udg] - start_depth
+            ts_depths.loc[period[0]:] = ts_depths.loc[period[0]:] - offset
+            # add look-ahead functionality to check for end of period.
+            # actually, there are two issues here, (a) UDG and (b) TDR changes
+            # So it makes more sense to feed this function with a corrected/homo
+            # UDG record, i.e. don't correct the UDG record here!
+
+
+    def _calculate_ec_depths():
+        pass
+
+
+    def _calculate_dtc_depths():
+        pass
+
+
+    def _calibrate_ec():
+        pass
+
 
 
 
