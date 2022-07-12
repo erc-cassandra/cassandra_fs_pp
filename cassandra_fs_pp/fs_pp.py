@@ -364,28 +364,6 @@ class fs():
         return filt
 
 
-    def _calculate_tdr_depth(
-        self,
-        tdr : int
-        ) -> None:
-        """
-        Calculate time-varying depth of a TDR with respect to surface UDG.
-
-        :param tdr: number of the TDR.
-        """
-        key = 'tdr%s.depth' %tdr
-        udg = self.config['level1_2']['udg_key']
-        ts_depths = self.ds_level1[udg]
-        for period in itertools.pairwise(self.config['level1_2'][key]):
-            start_depth = period[1]
-            offset = ts_depths.loc[period[0], udg] - start_depth
-            ts_depths.loc[period[0]:] = ts_depths.loc[period[0]:] - offset
-            # add look-ahead functionality to check for end of period.
-            # actually, there are two issues here, (a) UDG and (b) TDR changes
-            # So it makes more sense to feed this function with a corrected/homo
-            # UDG record, i.e. don't correct the UDG record here!
-
-
     def _calculate_ec_depths():
         pass
 
