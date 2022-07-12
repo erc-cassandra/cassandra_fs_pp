@@ -323,7 +323,7 @@ class fs():
             if change == -999:
                 break
             date, new_height = change
-            if next_change == -999:
+            if next_change is None:
                 udg.loc[date:] -= new_height
             else:
                 next_date, next_height = next_change
