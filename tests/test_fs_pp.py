@@ -13,6 +13,8 @@ import pandas as pd
 
 import cassandra_fs_pp as fspp
 
+import pdb
+
 ## Only load dataset once ...
 # See also:
 # https://stackoverflow.com/questions/50132703/pytest-fixture-for-a-class-through-self-not-as-method-argument
@@ -36,6 +38,10 @@ class TestFS:
         assert self._data.ds_level1.index.day[0] == 30
         assert self._data.ds_level1.index.day[-1] == 3
 
+    def test_load_dtc_positions(self) -> None:
+        pos = self._data.load_dtc_positions(key='dtc1_info')
+        assert pos.loc['DTC1_SensorPositions(12)'] == pytest.approx(1650)
+
     def test_rename_columns(self) -> None:
         assert isinstance(self._data.ds_level1, pd.DataFrame)
         mapping = self._data._define_l2_column_names()
@@ -55,5 +61,8 @@ class TestFS:
     def test_filter_udg(self) -> None:
         pass
 
-
+    def test_level1_to_level2(self) -> None:
+        self._data.level1_to_level2()
+        assert isinstance(self._data.ds_level2, pd.DataFrame)
+        assert 'TCDT(m)' in self._data.ds_level2.columns
 

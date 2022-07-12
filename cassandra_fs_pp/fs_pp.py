@@ -182,18 +182,18 @@ class fs():
 
     def _setup_level0_options(
         self,
-        dataset : str
+        dataset : str | None=None
         ) -> dict:
         """
         Stuff
         """
 
         args = {}
-        for key in ["skiprows", "header", "index_col", "na_values"]:
-            if key in self.config['level0'][dataset].keys():
-                args[key] = self.config['level0'][dataset][key]
-            else:
-                args[key] = self.config['level0_1'][key]
+        for key in ["skiprows", "header", "index_col", "na_values", "sep"]:
+            args[key] = self.config['level0_1'][key]
+            if dataset is not None:
+                if key in self.config['level0'][dataset].keys():
+                    args[key] = self.config['level0'][dataset][key]
 
         return args
 
@@ -212,6 +212,37 @@ class fs():
 
         data = pd.read_csv(filename, parse_dates=True, **load_opts)
         return data
+
+
+    def level1_to_level2(
+        self
+        ) -> None:
+        """
+        Process Level-1 data to Level-2
+        """
+
+        #l2_ec_mS = _calibrate_ec()
+
+        # Apply modifications to dataframe
+        # Start with a copy of level1 ds
+        level2 = copy.copy(self.ds_level1)
+
+        # Delete unwanted columns
+        for c in self.config['level1_2']['remove_columns']:
+            level2 = level2.drop(c, axis='columns')
+
+        # Rename
+        new_col_names = self._define_l2_column_names()
+        level2 = level2.rename(new_col_names, axis='columns')
+
+        # UDG
+        l2_udg = self._normalise_udg()
+        l2_udg = self._filter_udg(l2_udg)
+        level2[self.config['level0_1']['udg_key']] = l2_udg
+
+        # Overwrite mV EC with mS EC
+        self.ds_level2 = level2
+        return 
 
 
     def _define_l2_column_names(
@@ -265,40 +296,45 @@ class fs():
 
         return new_mapping
 
-    
-    def level1_to_level2(
-        self
-        ) -> None:
+
+    def load_dtc_positions(
+        self,
+        key : str | None=None,
+        filename : str | None=None,
+        check_length : bool=True
+        ) -> pd.Series:
         """
-        Process Level-1 data to Level-2
+        Load sensor positions reported by Recite.
+        Check that number matches the number of sensors in a string.
+
+        N.b. What if the string deployed at a site changes length mid-way 
+        through deployment? Probably has to be dealt with specifically...
+
+        :param key: the key from level1_2 which contains file info
+        :param filename: load this filename directly
+        :param check_length: if true, check length of reported chain positions against number of data columns.
         """
 
-        l2_udg = self._normalise_udg()
-        
-        for tdr in tdrs:
-            l2_tdrn_depth = _calculate_tdr(depth(tdr))
-        
-        l2_ec_depth = _calculate_ec_depths()
-        l2_ec_mS = _calibrate_ec()
-        
-        for dtc in dtcs:
-            l2_dtc_depth = _calculate_dtc_depths(dtc)
+        if key is not None and filename is not None:
+            raise ValueError('Provide only one of `key` or `filename`')
+        elif key is None and filename is None:
+            raise ValueError('Provide one of `key` or `filename`.')
+        elif key is not None:
+            filename = self.config['level1_2'][key]
+            filename = os.path.join(self.data_root, filename)
 
+        opts = self._setup_level0_options()
+        pos = pd.read_csv(filename, **opts)
+        pos = pos.drop('RECORD', axis='columns')
+        pos = pos.iloc[0]
 
-        ## Now apply modifications to dataframe
-        # Start with a copy of level1 ds
-        level2 = copy.copy(self.ds_level1)
+        if check_length:
+            dtc_id = pos.index[0][0:4]
+            ndata = len(self.ds_level1.filter(like='%s' %dtc_id, axis='columns').columns)
+            assert ndata == len(pos)
 
-        # Delete unwanted columns
-        for c in self.config['level1_2']['remove_columns']:
-            level2 = level2.drop(c, axis='columns')
-
-        # Overwrite mV EC with mS EC
-
-        # Add depth columns - in a sensible order!
-
-        # Actually, consider doing this as netcdf with proper coordinates per variable !
-
+        return pos
+  
 
     def _normalise_udg(
         self,
@@ -311,7 +347,7 @@ class fs():
         Requires level-1 data in memory.
         """
         if udg is None:
-            udg_key = 'TCDT'
+            udg_key = self.config['level0_1']['udg_key']
             udg = copy.deepcopy(self.ds_level1[udg_key])
 
         changes = self.config['level1_2']['udg_to_surface']
@@ -353,7 +389,7 @@ class fs():
 
         """
         if udg is None:
-            udg_key = 'TCDT'
+            udg_key = self.config['level0_1']['udg_key']
             udg = copy.deepcopy(self.ds_level1[udg_key])
 
         # Only retain data with quality flag according to SR50A manual
@@ -364,16 +400,8 @@ class fs():
         return filt
 
 
-    def _calculate_ec_depths():
-        pass
-
-
-    def _calculate_dtc_depths():
-        pass
-
-
     def _calibrate_ec():
-        pass
+        raise NotImplementedError
 
 
 

@@ -3,7 +3,6 @@
 # ---------------------------------------------------------------------------- #
 site="FS1_example"
 
-
 # ---------------------------------------------------------------------------- #
 # Level-0 to Level-1
 # ---------------------------------------------------------------------------- #
@@ -12,8 +11,8 @@ skiprows=[0,2,3]
 header=0
 index_col='TIMESTAMP'
 na_values=['NAN']
-dtc1_info="fielddata_202107/FS1_DTC1_DiagSettings.dat"
-dtc2_info=false
+udg_key='TCDT'
+sep=','
 
 
 # ---------------------------------------------------------------------------- #
@@ -25,13 +24,14 @@ dtc2_info=false
 
 # Distance from bottom of UDG rim to surface
 # Add a new row when UDG position changes (e.g. pole extension).
-udg_key='TCDT(m)'
 udg_to_surface=[[2021-04-30, 2.06], [2021-05-02T22:00:00, 1.81]]
 
-# Depth of installed TDR.
-tdr1.depth=[2021-04-30, 0.48]
-tdr2.depth=[2021-04-30, 1.15]
-tdr3.depth=[2021-04-30, 1.36]
+# Depth of installed TDRs. (negative values!)
+tdr_depth={1=-0.48, 2=-1.15, 3=-1.36}
+
+# DAT files containing sensor positions
+dtc1_info="fielddata_202107/FS1_DTC1_DiagSettings.dat"
+dtc2_info=false
 
 # Date, number, height above surface of first sensor within the tube (DTC1).
 dtc1.first_sensor=[[2021-04-01, 1, 1.30]]
@@ -53,4 +53,5 @@ subpath=""
 type="bales"
 bales_start=1
 bales_stop=3
+
     
