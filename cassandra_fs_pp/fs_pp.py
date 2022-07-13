@@ -307,9 +307,6 @@ class fs():
         Load sensor positions reported by Recite.
         Check that number matches the number of sensors in a string.
 
-        N.b. What if the string deployed at a site changes length mid-way 
-        through deployment? Probably has to be dealt with specifically...
-
         :param key: the key from level1_2 which contains file info
         :param filename: load this filename directly
         :param check_length: if true, check length of reported chain positions against number of data columns.
