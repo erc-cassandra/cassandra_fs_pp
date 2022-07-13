@@ -238,7 +238,7 @@ class fs():
         # UDG
         l2_udg = self._normalise_udg()
         l2_udg = self._filter_udg(l2_udg)
-        level2[self.config['level0_1']['udg_key']] = l2_udg
+        level2['TCDT(m)'] = l2_udg
 
         # Overwrite mV EC with mS EC
         self.ds_level2 = level2
@@ -359,7 +359,7 @@ class fs():
             if change == -999:
                 break
             date, new_height = change
-            if next_change is None:
+            if next_change is None or next_change == -999:
                 udg.loc[date:] -= new_height
             else:
                 next_date, next_height = next_change
