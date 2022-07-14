@@ -221,8 +221,6 @@ class fs():
         Process Level-1 data to Level-2
         """
 
-        #l2_ec_mS = _calibrate_ec()
-
         # Apply modifications to dataframe
         # Start with a copy of level1 ds
         level2 = copy.copy(self.ds_level1)
@@ -241,6 +239,11 @@ class fs():
         level2['TCDT(m)'] = l2_udg
 
         # Overwrite mV EC with mS EC
+        l2_ec = self._calibrate_ec()
+        # df.assign() requires a dict of Series!
+        level2 = level2.assign(**{c:l2_ec[c] for c in l2_ec.columns})
+
+        # Set to object
         self.ds_level2 = level2
         return 
 
@@ -397,9 +400,42 @@ class fs():
         return filt
 
 
-    def _calibrate_ec():
-        raise NotImplementedError
+    def _calibrate_ec(
+        self,
+        cal_file : str | None=None,
+        transform : bool=True
+        ) -> pd.DataFrame:
+        """ 
+        Convert EC sensor millivolts to physical units using linear regression.
 
+        :param cal_file: path to calibration coefficients file.
+        :param transform: if true, do (1-EC values)
+        """
 
+        assert isinstance(self.ds_level1)
 
+        def _apply_cal(column):
+            try:
+                m = calibration.loc[column.name, 'm']
+                c = calibration.loc[column.name, 'c']
+            except IndexError:
+                print('No cal. data for %s, using average of other sensors' %column)
+                m = calibration['m'].mean()
+                c = calibration['c'].mean()
+            if transform:
+                column = 1 - column
+            ec = m * column + c
+            return ec
 
+        if cal_file is None:
+             cal_file = os.path.join(
+                data_root, 
+                'ec_calibration', 
+                'calibration_coefficients_%s_c0.csv' %self.config['site'].upper()
+            )
+        calibrations = pd.read_csv(cal_file, index_col=0)
+
+        just_ec = self.ds_level1.filter(regex='EC\([0-9]+\)', axis=1)
+        ec_ms = just_ec.apply(calibrate_ec)
+
+        return ec_ms
