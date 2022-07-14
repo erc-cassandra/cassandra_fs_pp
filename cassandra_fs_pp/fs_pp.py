@@ -334,7 +334,32 @@ class fs():
             assert ndata == len(pos)
 
         return pos
-  
+
+
+    def chain_installation_depths(
+        self,
+        sensor_positions : pd.Series, 
+        first_sensor : int,
+        depth : float
+        ) -> dict:
+        """
+        Relevant for all chains which are fixed in position and with defined spacing.
+        Returns the installation depth of each sensor in the chain.
+
+        :param sensor_positions: in positive millimetres, as per format provided by load_dtc_positions
+        :param first_sensor : int, ID of sensor for which depth was measured
+        :param depth : float, depth of sensor with ID first_sensor (-ve if below ground)
+        """
+        # Convert from +ve mm to -ve metres
+        sensor_positions = sensor_positions * 1e-3 * -1
+        ref_sensor_position = sensor_positions.iloc[first_sensor + 1]
+        ref_sensor_depth = depth
+        sensor_depths_t0 = copy.deepcopy(sensor_positions)
+        #                    Negatives           Negative            Negative
+        sensor_depths_t0 = sensor_depths_t0 - ref_sensor_position + depth
+        sensor_depths_t0.index = np.arange(1, len(sensor_depths_t0)+1)
+        return sensor_depths_t0.to_dict()
+      
 
     def _normalise_udg(
         self,
