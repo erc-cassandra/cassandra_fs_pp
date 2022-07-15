@@ -128,7 +128,12 @@ class fs():
             p = os.path.join(self.data_root, dataset, ds_config['subpath'])
             ds = self._load_level0_file(p, ds_load_opts)
 
-            subpath_root = os.path.split(ds_config['subpath'])[0]
+        if add_serviced:
+            if ds_config['type'] == 'onefile':
+                subpath_root = os.path.split(ds_config['subpath'])[0]
+            elif ds_config['type'] == 'bales':
+                # Bales have to have the subfolder containing all the bale files specified.
+                subpath_root = os.path.join(*ds_config['subpath'].split('/')[:-1])
             serviced_root = os.path.join(self.data_root, dataset, subpath_root, 'serviced')
             if os.path.exists(serviced_root):
                 files = glob.glob(os.path.join(serviced_root, '*MainTable*'))
@@ -272,6 +277,13 @@ class fs():
         # Set to object
         self.ds_level2 = level2
         return 
+
+
+    def _get_level2_default_path(self) -> None:
+        """
+        Default location of level-2 dataset.
+        """
+        return os.path.join(self.data_root, 'firn_stations/level-2', self.config['site'] + '.nc')
 
 
     def _define_l2_column_names(
@@ -470,8 +482,8 @@ class fs():
             try:
                 m = calibrations.loc[column.name, 'm']
                 c = calibrations.loc[column.name, 'c']
-            except IndexError:
-                print('No cal. data for %s, using average of other sensors' %column)
+            except KeyError:
+                print('No cal. data for %s, using average of other sensors' %column.name)
                 m = calibrations['m'].mean()
                 c = calibrations['c'].mean()
             if transform:

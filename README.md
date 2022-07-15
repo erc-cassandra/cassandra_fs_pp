@@ -28,6 +28,15 @@ The `data_root` must contain the following directories:
     + `level-1` -> level-1 outputs are saved to here.
     + `level-2` -> level-2 outputs are saved to here.
 - Folders containing batches of field-collected data - "subdatasets".
+    + If there is a sub-folder titled `serviced` then, for subdatasets with `type=onefile`, the "serviced" data will be concatenated to the dataset. (see `FS4.toml` for practical example)  
+- Structure of onefile subdatasets:
+    + `<subdataset>`
+        * `<site>_MainTable.dat`
+        * `serviced/*MainTable*.dat`
+- Structure of bale subdatasets:
+    + `<subdataset>`
+        * `<folder of bales>`
+        * `serviced/*MainTable*dat`
 
 Site-specific metadata files do not have to be kept in the `data_root` as their
 location can be specified manually at run-time. Nonetheless this is usually sensible. 
@@ -90,6 +99,13 @@ These data are output to NetCDF files. Note that various metadata are appended
 to the NetCDF files; to change these settings make edits directly to `bin/fs_process_l2.py`.
 
 Helper utilities for working with Level-2 data are available (`l2utils`). The main functionality at the moment is to assist in deriving 'instantaneous' burial depth as a function of UDG-derived surface height change.
+
+
+## Known issues with implications for data quality
+
+Some DTCs were installed with the uppermost sensors coiled together and left spare. This means that the installation depths calculated for sensors located above the first sensor in the borehole are not necessarily valid. Mainly the case for FS4 and FS5.
+
+See also the GitHub issues tracker.
 
 
 ## Development
