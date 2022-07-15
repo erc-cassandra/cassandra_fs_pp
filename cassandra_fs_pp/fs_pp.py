@@ -14,6 +14,7 @@ import logging
 import re
 import copy
 import numpy as np
+import glob
 
 REQUIRED_CONFIG_KEYS = ['site']
 REQUIRED_CONFIG_L0_KEYS = ['header', 'skiprows', 'index_col']
@@ -76,30 +77,47 @@ class fs():
       
 
     def level0_to_level1(
-        self
+        self,
+        add_latest_serviced : bool=True
         ) -> pd.DataFrame:
         """ 
-        stuff
+        Transform Level-0 data to Level-1.
+
+        Sets self.ds_level1.
+
+        :param add_latest_serviced: if True, append the data from the first *MainTable*
+        file found in the `serviced` sub-directory of the latest subdataset.
         """
         store = []
+        nds = len(self.config['level0'])
+        n = 1
         for dataset in self.config['level0']:
-            sds = self.load_level0_dataset(dataset)
+            if n == nds:
+                serviced = True
+            else:
+                serviced = False
+            sds = self.load_level0_dataset(dataset, add_serviced=serviced)
             store.append(sds)
+            n += 1
 
         ds = pd.concat(store, axis=0)
-        #ds = ds.sort_index()
         self.ds_level1 = ds
         return ds
 
 
     def load_level0_dataset(
         self,
-        dataset : str
+        dataset : str,
+        add_serviced : bool=False
         ) -> pd.DataFrame:
         """
         Load a complete dataset (single file or bales) into memory.
 
         :param dataset: name of level-0 dataset as listed in TOML file.
+        :param add_serviced: for "onefile" datasets this function can
+        also look for a subfolder named `serviced`, located within config 
+        option `subpath`. It will add data saved here, the idea being to 
+        concatenate the newly-read-out data downloaded at the end of the servicing visit.
         """
         ds_config = self.config['level0'][dataset]        
         ds_load_opts = self._setup_level0_options(dataset)
@@ -107,7 +125,17 @@ class fs():
         if ds_config['type'] == 'bales':
             ds = self._concat_bale(dataset, ds_load_opts)
         elif ds_config['type'] == 'onefile':
-            ds = self._load_level0_file(ds_load_opts)
+            p = os.path.join(self.data_root, dataset, ds_config['subpath'])
+            ds = self._load_level0_file(p, ds_load_opts)
+
+            subpath_root = os.path.split(ds_config['subpath'])[0]
+            serviced_root = os.path.join(self.data_root, dataset, subpath_root, 'serviced')
+            if os.path.exists(serviced_root):
+                files = glob.glob(os.path.join(serviced_root, '*MainTable*'))
+                if len(files) == 1:
+                    print('Found post-servicing dataset %s' %files[0])
+                    ds2 = self._load_level0_file(files[0], ds_load_opts)
+                    ds = pd.concat((ds, ds2), axis=0)
 
         return ds
 
