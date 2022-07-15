@@ -4,6 +4,17 @@ This repository provides a workflow for converting the raw 'engineering' dataset
 recorded by Cassandra firn stations into calibrated, physical datasets suitable
 for further analysis.
 
+## Installation
+
+Set up an environment with the pre-requisites (see `dev-requirements.txt`), then:
+
+    git clone <repo>
+    cd <repo>
+    pip install .
+
+This adds the main processing scripts to your system path. If doing development work,
+see the Development section later in this README.
+
 
 ## Files layout
 
@@ -13,17 +24,18 @@ The `data_root` must contain the following directories:
 
 - `ec_calibration` (required if processing EC chain measurements)
 - `firn_stations`
+    + `ppconfig` -> metadata TOML files are kept here, normally named `<site>.toml`.
     + `level-1` -> level-1 outputs are saved to here.
     + `level-2` -> level-2 outputs are saved to here.
 - Folders containing batches of field-collected data - "subdatasets".
 
-Site-specific metadata files do not need to be kept in the `data_root`, but
-this is usually sensible. Find the up-to-date metadata files in `firn_stations/ppconfig/`.
+Site-specific metadata files do not have to be kept in the `data_root` as their
+location can be specified manually at run-time. Nonetheless this is usually sensible. 
 
 
 ## Metadata files
 
-Post-processing essentially uses metadata about each firn station to bring its
+Post-processing requires metadata about each firn station to bring its
 measurements into the physical domain. A complete and self-documenting example can be found in `test_data`. These files are in [TOML format v1.0.0](https://toml.io/en/v1.0.0.).
 
 Note that the schema of the metadata files is currently not enforced before the workflow
@@ -33,14 +45,17 @@ workflow fails to find that key in the metadata file!
 
 ## Check-list for running the workflow
 
+The simplest way to run this workflow is to navigate to the `data_root` on your
+terminal line, then execute the scripts there.
+
 1. Check that files are in-place according to information above.
-2. Update the TOML file of each station visited: 
+2. Update the metadata TOML file of each station visited: 
     - add the latest level-0 dataset(s)
     - add new UDG position if it was changed
     - add any new TDRs
     - if a new TDR replaces an old one, note the new installation date and depth
-3. Run `bin/fs_process_l1.py`
-4. Run `bin/fs_process_l2.py`
+3. Run `fs_process_l1.py <site>`. This is silent, producing a Level-1 CSV file.
+4. Run `fs_process_l2.py <site>`. This is silent, producing a Level-2 NetCDF file.
 
 
 ## Data levels
@@ -52,7 +67,8 @@ Refers to raw files straight from the station loggers.
 At the moment only directly-downloaded data are supported, not transmitted.
 
 Depending on the logger setup, level-0 data may consist of either a single file, 
-or of multiple files. This workflow refers to the latter as 'bales' of files, 
+or of multiple files, usually if data were offloaded by a CR800 logger onto an
+SC115 USB device. This workflow refers to the latter as 'bales' of files, 
 generally one bale per station visit.
 
 
@@ -66,7 +82,9 @@ These data are output to csv files.
 
 ### Level-2
 
-Quantities such as TDR burial depth are derived and added to this level of data.
+Sensor burial depths are derived and added to this level of data.
+
+Electrical conductivity chains are converted to micro-siemens.
 
 These data are output to NetCDF files. Note that various metadata are appended
 to the NetCDF files; to change these settings make edits directly to `bin/fs_process_l2.py`.

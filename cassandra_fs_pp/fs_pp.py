@@ -15,11 +15,9 @@ import re
 import copy
 import numpy as np
 
-import pdb
-from importlib import reload
-
 REQUIRED_CONFIG_KEYS = ['site']
 REQUIRED_CONFIG_L0_KEYS = ['header', 'skiprows', 'index_col']
+
 
 def pairwise(lst):
     """ yield item i and item i+1 in lst. e.g.
@@ -150,7 +148,7 @@ class fs():
         """
         Default location of level-1 dataset.
         """
-        return os.path.join(self.data_root, 'level-1', self.config['site'] + '.csv')
+        return os.path.join(self.data_root, 'firn_stations/level-1', self.config['site'] + '.csv')
 
 
     def _concat_bale(
