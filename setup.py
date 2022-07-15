@@ -4,9 +4,9 @@ from typing import Optional
 
 from setuptools import setup
 
-FULLVERSION = "0.0.1"
+FULLVERSION = "0.1.0"
 VERSION = FULLVERSION
-
+    
 write_version = True
 
 
@@ -45,7 +45,7 @@ setup(
     author="Andrew Tedstone",
     license="BSD-3",
     packages=["cassandra_fs_pp"],
-    install_requires=["pandas"],
+    install_requires=["pandas", "xarray"],
     scripts=["bin/fs_process_l1.py", "bin/fs_process_l2.py"],
     zip_safe=False,
     classifiers=[
