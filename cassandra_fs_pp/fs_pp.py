@@ -320,7 +320,7 @@ class fs():
         elif key is None and filename is None:
             raise ValueError('Provide one of `key` or `filename`.')
         elif key is not None:
-            filename = self.config['level1_2'][key]
+            filename = self.config['level1_2']['dtc_info'][str(key)][0]
             filename = os.path.join(self.data_root, filename)
 
         opts = self._setup_level0_options()
@@ -352,7 +352,8 @@ class fs():
         """
         # Convert from +ve mm to -ve metres
         sensor_positions = sensor_positions * 1e-3 * -1
-        ref_sensor_position = sensor_positions.iloc[first_sensor + 1]
+        print(sensor_positions)
+        ref_sensor_position = sensor_positions.iloc[first_sensor - 1]
         ref_sensor_depth = depth
         sensor_depths_t0 = copy.deepcopy(sensor_positions)
         #                    Negatives           Negative            Negative
@@ -437,16 +438,16 @@ class fs():
         :param transform: if true, do (1-EC values)
         """
 
-        assert isinstance(self.ds_level1)
+        assert isinstance(self.ds_level1, pd.DataFrame)
 
         def _apply_cal(column):
             try:
-                m = calibration.loc[column.name, 'm']
-                c = calibration.loc[column.name, 'c']
+                m = calibrations.loc[column.name, 'm']
+                c = calibrations.loc[column.name, 'c']
             except IndexError:
                 print('No cal. data for %s, using average of other sensors' %column)
-                m = calibration['m'].mean()
-                c = calibration['c'].mean()
+                m = calibrations['m'].mean()
+                c = calibrations['c'].mean()
             if transform:
                 column = 1 - column
             ec = m * column + c
@@ -454,13 +455,13 @@ class fs():
 
         if cal_file is None:
              cal_file = os.path.join(
-                data_root, 
+                self.data_root, 
                 'ec_calibration', 
                 'calibration_coefficients_%s_c0.csv' %self.config['site'].upper()
             )
         calibrations = pd.read_csv(cal_file, index_col=0)
 
         just_ec = self.ds_level1.filter(regex='EC\([0-9]+\)', axis=1)
-        ec_ms = just_ec.apply(calibrate_ec)
+        ec_ms = just_ec.apply(_apply_cal)
 
         return ec_ms
