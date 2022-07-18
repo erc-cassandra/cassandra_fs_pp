@@ -1,4 +1,5 @@
 from cassandra_fs_pp.fs_pp import fs
+import l2utils
 
 try:
     from cassandra_fs_pp.version import version as __version__  # noqa

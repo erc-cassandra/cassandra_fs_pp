@@ -6,7 +6,8 @@ Andrew Tedstone, July 2022
 
 def calc_depth_tdrs(
     arr : xr.DataArray, 
-    udg : xr.DataArray
+    udg : xr.DataArray,
+    smooth_udg : int=3
     ) -> xr.DataArray:
     """
     Consider this problem in terms of the total distance between the UDG
@@ -16,16 +17,22 @@ def calc_depth_tdrs(
     We need to account for periods of surface lowering before we can calculate
     the new burial depth of the TDR.
     """
-    offset = float(udg_median_xr.isel(time=0)) - arr.tdr_install_depth.values
+    # This needs to find the start date of each TDR first !!
+    if smooth_udg > 0:
+        udg = udg.rolling(time=smooth_udg, center=True).median(dim='time')
+    offset = float(udg.isel(time=0)) - arr.tdr_install_depth.values
     D = []
     for t in arr.time:
-        udg = float(udg_median_xr.sel(time=t))
-        Dt = udg - offset
+        #status = [somehting with nans]
+        udgt = float(udg.sel(time=t))
+        Dt = udgt - offset
         Dt = np.minimum(0, Dt)
-        offset = np.where(Dt == 0, udg, offset)
+        offset = np.where(Dt == 0, udgt, offset)
         D.append(Dt)
     DD = np.array(D)
     arr.coords['tdr_depth'] = (('time', 'tdr_sensor'), DD)
+    # Deal with any nans
+    arr.coords['tdr_depth'] = arr.tdr_depth.interpolate_na(dim='time')
     return arr
 
 
@@ -40,6 +47,8 @@ def calc_depth(
     """
     arr.coords['%s_depth' %sensor_type] = arr['%s_install_depth' %sensor_type] + udg
     return arr
+
+
 
 if __name__ == '__main__':
 
