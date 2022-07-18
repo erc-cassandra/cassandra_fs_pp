@@ -316,7 +316,6 @@ class fs():
             # 'Array'-type variables (e.g. DTC)
             if len(cols) > 1:
                 for col in cols:
-                    #print(col)
                     # Get sensor number
                     # First try array-type variable
                     res = re.search(r'\((?P<id>[0-9]+)\)$', col)
@@ -392,7 +391,6 @@ class fs():
         """
         # Convert from +ve mm to -ve metres
         sensor_positions = sensor_positions * 1e-3 * -1
-        print(sensor_positions)
         ref_sensor_position = sensor_positions.iloc[first_sensor - 1]
         ref_sensor_depth = depth
         sensor_depths_t0 = copy.deepcopy(sensor_positions)

@@ -15,7 +15,7 @@ import argparse
 import cassandra_fs_pp as fs_pp
 
 
-
+import pdb
 
 parser = argparse.ArgumentParser('Process level-1 data up to level-2 status.')
 
@@ -68,6 +68,8 @@ udg_median = fs.ds_level2['TCDT(m)'].rolling('3D', center=True).median()
 udg_median_xr = xr.DataArray(udg_median, dims=['time'])
 
 data_vars = {}
+encoding = {}
+# {"my_variable": {"dtype": "int16", "scale_factor": 0.1, "zlib": True}, ...}
 
 ## -----------------------------------------------------------------------------
 ## Organise Sub-Surface data
@@ -91,13 +93,14 @@ active_tdrs = {}
 for tdr in tdr_info:
     if 'TDR%s_T(C)' %tdr in fs.ds_level2.columns:
         active_tdrs[int(tdr)] = tdr_info[tdr]
-data_vars['TDR_T'] = subsurf_DataArray('tdr', 'land_ice_temperature', 'degree_Celsius', 'TDR[0-9]\_T', active_tdrs)
-data_vars['TDR_EC'] = subsurf_DataArray('tdr', 'electrical_conductivity', 'dS/m', 'TDR[0-9]\_EC', active_tdrs)
-data_vars['TDR_VWC'] = subsurf_DataArray('tdr', 'volumetric_water_content', 'm^3/m^3', 'TDR[0-9]\_VWC', active_tdrs)
-data_vars['TDR_Perm'] = subsurf_DataArray('tdr', 'permittivity', '', 'TDR[0-9]\_Perm', active_tdrs)
-data_vars['TDR_VR'] = subsurf_DataArray('tdr', 'voltage_ratio', '', 'TDR[0-9]\_VR', active_tdrs)
-data_vars['TDR_Period'] = subsurf_DataArray('tdr', 'period', 'microseconds', 'TDR[0-9]\_Period', active_tdrs)
+data_vars['TDR_T'] = subsurf_DataArray('tdr', 'land_ice_temperature', 'degree_Celsius', r'TDR[0-9]\_T', active_tdrs)
+data_vars['TDR_EC'] = subsurf_DataArray('tdr', 'electrical_conductivity', 'dS/m', r'TDR[0-9]\_EC', active_tdrs)
+data_vars['TDR_VWC'] = subsurf_DataArray('tdr', 'volumetric_water_content', 'm^3/m^3', r'TDR[0-9]\_VWC', active_tdrs)
+data_vars['TDR_Perm'] = subsurf_DataArray('tdr', 'permittivity', '', r'TDR[0-9]\_Perm', active_tdrs)
+data_vars['TDR_VR'] = subsurf_DataArray('tdr', 'voltage_ratio', '', r'TDR[0-9]\_VR', active_tdrs)
+data_vars['TDR_Period'] = subsurf_DataArray('tdr', 'period', 'microseconds', r'TDR[0-9]\_Period', active_tdrs)
 
+#pdb.set_trace()
 #DTC
 for dtc_key, values in fs.config['level1_2']['dtc_info'].items():
     sensor_positions_f, first_sensor, depth = values
@@ -105,7 +108,7 @@ for dtc_key, values in fs.config['level1_2']['dtc_info'].items():
     dtc_depths_t0 = fs.chain_installation_depths(sensor_positions, first_sensor, depth)
     # consider mask of valid DTC sensors - this is only relevant where extra sensors
     # have been coiled at the surface.
-    dtc = subsurf_DataArray('dtc%s'%dtc_key, 'land_ice_temperature', 'degree_Celsius', 'DTC1_[0-9]+', 
+    dtc = subsurf_DataArray('dtc%s'%dtc_key, 'land_ice_temperature', 'degree_Celsius', r'DTC%s_[0-9]+' %dtc_key, 
         dtc_depths_t0)
     data_vars['DTC%s'%dtc_key] = dtc
 
@@ -114,7 +117,7 @@ for ec_key, values in fs.config['level1_2']['ec_info'].items():
     sensor_positions_f, first_sensor, depth = values
     sensor_positions = pd.read_csv(os.path.join(fs.data_root,sensor_positions_f)).squeeze()
     ec_depths_t0 = fs.chain_installation_depths(sensor_positions, first_sensor, depth)
-    ec = subsurf_DataArray('ec%s'%ec_key, 'electrical_conductivity', 'microSiemens', 'EC\([0-9]+\)', 
+    ec = subsurf_DataArray('ec%s'%ec_key, 'electrical_conductivity', 'microSiemens', r'EC\([0-9]+\)', 
         ec_depths_t0)
     data_vars['EC%s'%dtc_key] = dtc    
 
@@ -155,5 +158,15 @@ attrs = {
 
 dataset = xr.Dataset(data_vars=data_vars, attrs=attrs)
 
+exclude = ['time', 'tdr_sensor']
+for var in dataset.variables:
+    if var in exclude:
+        continue
+    encoding[var] = {'dtype':'int16', 'scale_factor':0.001, 'zlib':False, '_FillValue':-9999}
+    #dataset[var].attrs['_FillValue'] = -999
+
 # Write to netcdf
-dataset.to_netcdf(os.path.join(fs.data_root, 'firn_stations/level-2/%s.nc' %fs.config['site']))
+dataset.to_netcdf(os.path.join(fs.data_root, 'firn_stations/level-2/%s.nc' %fs.config['site']),
+    encoding=encoding, unlimited_dims=['time'])
+
+pdb.set_trace()
