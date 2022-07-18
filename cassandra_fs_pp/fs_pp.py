@@ -133,14 +133,16 @@ class fs():
                 subpath_root = os.path.split(ds_config['subpath'])[0]
             elif ds_config['type'] == 'bales':
                 # Bales have to have the subfolder containing all the bale files specified.
-                subpath_root = os.path.join(*ds_config['subpath'].split('/')[:-1])
-            serviced_root = os.path.join(self.data_root, dataset, subpath_root, 'serviced')
-            if os.path.exists(serviced_root):
-                files = glob.glob(os.path.join(serviced_root, '*MainTable*'))
-                if len(files) == 1:
-                    print('Found post-servicing dataset %s' %files[0])
-                    ds2 = self._load_level0_file(files[0], ds_load_opts)
-                    ds = pd.concat((ds, ds2), axis=0)
+                split = ds_config['subpath'].split('/')
+                if len(split) > 1:
+                    subpath_root = os.path.join(*split[:-1])
+                    serviced_root = os.path.join(self.data_root, dataset, subpath_root, 'serviced')
+                    if os.path.exists(serviced_root):
+                        files = glob.glob(os.path.join(serviced_root, '*MainTable*'))
+                        if len(files) == 1:
+                            print('Found post-servicing dataset %s' %files[0])
+                            ds2 = self._load_level0_file(files[0], ds_load_opts)
+                            ds = pd.concat((ds, ds2), axis=0)
 
         return ds
 
@@ -317,17 +319,17 @@ class fs():
                     #print(col)
                     # Get sensor number
                     # First try array-type variable
-                    res = re.search('\((?P<id>[0-9]+)\)$', col)
+                    res = re.search(r'\((?P<id>[0-9]+)\)$', col)
                     if res == None:
                         # If that doesn't work, try generic multiple type
-                        res = re.search('[A-Za-z]+(?P<id>[0-9]+)\_', col)
+                        res = re.search(r'[A-Za-z]+(?P<id>[0-9]+)\_', col)
                     if res == None:
                         print('Could not find sensor ID.')
                         raise ValueError
 
                     sensor_id = res.groupdict()['id']
 
-                    renumber = re.compile('\*')
+                    renumber = re.compile(r'\*')
                     new_mapping[col] = renumber.sub(sensor_id, mapp.loc['level2'])
             elif len(cols) == 1:
                 col = cols[0]
@@ -499,7 +501,7 @@ class fs():
             )
         calibrations = pd.read_csv(cal_file, index_col=0)
 
-        just_ec = self.ds_level1.filter(regex='EC\([0-9]+\)', axis=1)
+        just_ec = self.ds_level1.filter(regex=r'EC\([0-9]+\)', axis=1)
         ec_ms = just_ec.apply(_apply_cal)
 
         return ec_ms

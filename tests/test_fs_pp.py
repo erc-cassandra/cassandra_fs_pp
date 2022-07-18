@@ -41,7 +41,7 @@ class TestFS:
 
     def test_get_level1_default_path(self) -> None:
         p = self._data._get_level1_default_path()
-        assert p == 'test_data/level-1/FS1_example.csv'
+        assert p == 'test_data/firn_stations/level-1/FS1_example.csv'
 
     def test_load_dtc_positions(self) -> None:
         pos = self._data.load_dtc_positions(key=1)
