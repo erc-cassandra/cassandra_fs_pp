@@ -98,8 +98,6 @@ Electrical conductivity chains are converted to micro-siemens.
 These data are output to NetCDF files. Note that various metadata are appended
 to the NetCDF files; to change these settings make edits directly to `bin/fs_process_l2.py`.
 
-Helper utilities for working with Level-2 data are available (`l2utils`). The main functionality at the moment is to assist in deriving 'instantaneous' burial depth as a function of UDG-derived surface height change.
-
 
 ## Known issues with implications for data quality
 
