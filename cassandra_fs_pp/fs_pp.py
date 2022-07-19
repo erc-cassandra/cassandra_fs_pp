@@ -359,7 +359,7 @@ class fs():
         elif key is None and filename is None:
             raise ValueError('Provide one of `key` or `filename`.')
         elif key is not None:
-            filename = self.config['level1_2']['dtc_info'][str(key)][0]
+            _, filename, _, _ = self.config['level1_2']['dtc_info'][str(key)]
             filename = os.path.join(self.data_root, filename)
 
         opts = self._setup_level0_options()
@@ -503,3 +503,32 @@ class fs():
         ec_ms = just_ec.apply(_apply_cal)
 
         return ec_ms
+
+
+    def _calc_depth_tdr(
+        self,
+        tdr : int | str,
+        udg
+        ) -> np.array:
+        """ Calculate depth of single TDR
+        """
+        
+        install_date, install_depth = self.config['level1_2']['tdr_info'][str(tdr)]
+
+        offset = float(udg.loc[install_date.strftime('%Y-%m-%d')][0]) - install_depth
+
+        udg = udg.loc[install_date:]
+
+        D = []
+        for ix,udgt in udg.iteritems():
+            Dt = udgt - offset
+            Dt = np.minimum(0, Dt)
+            offset = np.where(Dt == 0, udgt, offset)
+            D.append(Dt)
+
+        DD = np.array(D)
+        DD = pd.Series(DD, index=udg.index, name='TDR%s_Depth'%tdr)
+        return DD
+
+
+

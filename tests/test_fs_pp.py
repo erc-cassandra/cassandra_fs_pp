@@ -82,7 +82,7 @@ class TestFS:
 
     def test_dtc_installation_depths(self) -> None:
         pos = self._data.load_dtc_positions(key=1)
-        pth, sensor, depth = self._data.config['level1_2']['dtc_info']['1']
+        ins_date, pth, sensor, depth = self._data.config['level1_2']['dtc_info']['1']
         depths = self._data.chain_installation_depths(pos, sensor, depth)
         # Sensor 1 was buried to -0.17 m.
         assert depths[1] == pytest.approx(-0.17)
@@ -90,7 +90,7 @@ class TestFS:
         assert depths[2] == pytest.approx(-0.17 + -0.15)
 
     def test_ec_installation_depths(self) -> None:
-        fpos, sensor, depth = self._data.config['level1_2']['ec_info']['1']
+        ins_date, fpos, sensor, depth = self._data.config['level1_2']['ec_info']['1']
         pos = pd.read_csv(os.path.join(self._data.data_root, fpos)).squeeze()
         depths = self._data.chain_installation_depths(pos, sensor, depth)
         # Sensor 1 was buried to -0.16 m.
@@ -102,4 +102,11 @@ class TestFS:
         self._data.level1_to_level2()
         assert isinstance(self._data.ds_level2, pd.DataFrame)
         assert 'TCDT(m)' in self._data.ds_level2.columns
+
+    def test_calc_depth_tdr(self) -> None:
+        udg = self._data.ds_level2['TCDT(m)'].rolling(3, center=True).median()
+        udg = udg.dropna()
+        udg = udg.interpolate()
+        d = self._data._calc_depth_tdr(1, udg)
+        # Need to add an assertion here still.
 

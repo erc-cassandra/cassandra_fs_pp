@@ -59,7 +59,7 @@ if not args.ow:
 
 fs.load_level1_dataset(args.outfile)
 fs.ds_level1.index.name = 'time'
-
+#pdb.set_trace()
 # Convert the data to level-2 format.
 fs.level1_to_level2()
 
@@ -80,19 +80,42 @@ def subsurf_DataArray(sensor_type, name, units, pattern, sensors_info):
         coords={
             'time': fs.ds_level2.index, 
             '%s_sensor' %sensor_type: list(sensors_info.keys()), 
-            '%s_install_depth' %sensor_type: ('%s_sensor' %sensor_type, list(sensors_info.values()))
+            '%s_install_depth' %sensor_type: ('%s_sensor' %sensor_type, list(sensors_info.values())),
         }
     )
+    if sensor_type == 'tdr':
+        arr.coords['tdr_depth'] = data_vars['TDR_Depth']
+
     arr.attrs['standard_name'] = name
     arr.attrs['units'] = units
     return arr
 
 # TDRs
-tdr_info = fs.config['level1_2']['tdr_depth']
+tdr_info = fs.config['level1_2']['tdr_info']
+
 active_tdrs = {}
-for tdr in tdr_info:
+depths = []
+for tdr in tdr_info.keys():
     if 'TDR%s_T(C)' %tdr in fs.ds_level2.columns:
-        active_tdrs[int(tdr)] = tdr_info[tdr]
+        # Create a dict of TDR number : depth
+        active_tdrs[int(tdr)] = tdr_info[tdr][1]
+        depths.append(fs._calc_depth_tdr(tdr, udg_median))
+tdr_depths = pd.concat(depths, axis=1)
+
+data_vars['TDR_Depth'] = xr.DataArray(
+    tdr_depths, 
+    dims=('time', 'tdr_sensor'),
+    coords={
+        'time':tdr_depths.index,
+        'tdr_sensor':list(active_tdrs.keys())
+    },
+    attrs={
+        'standard_name':'tdr_depth_below_surface',
+        'units':'m',
+        'description':'Estimated depth of TDR sensor below surface at given timestamp'
+    }
+)
+
 data_vars['TDR_T'] = subsurf_DataArray('tdr', 'land_ice_temperature', 'degree_Celsius', r'TDR[0-9]\_T', active_tdrs)
 data_vars['TDR_EC'] = subsurf_DataArray('tdr', 'electrical_conductivity', 'dS/m', r'TDR[0-9]\_EC', active_tdrs)
 data_vars['TDR_VWC'] = subsurf_DataArray('tdr', 'volumetric_water_content', 'm^3/m^3', r'TDR[0-9]\_VWC', active_tdrs)
@@ -103,7 +126,7 @@ data_vars['TDR_Period'] = subsurf_DataArray('tdr', 'period', 'microseconds', r'T
 #pdb.set_trace()
 #DTC
 for dtc_key, values in fs.config['level1_2']['dtc_info'].items():
-    sensor_positions_f, first_sensor, depth = values
+    install_date, sensor_positions_f, first_sensor, depth = values
     sensor_positions = fs.load_dtc_positions(filename=os.path.join(fs.data_root,sensor_positions_f))
     dtc_depths_t0 = fs.chain_installation_depths(sensor_positions, first_sensor, depth)
     # consider mask of valid DTC sensors - this is only relevant where extra sensors
@@ -114,7 +137,7 @@ for dtc_key, values in fs.config['level1_2']['dtc_info'].items():
 
 # EC
 for ec_key, values in fs.config['level1_2']['ec_info'].items():
-    sensor_positions_f, first_sensor, depth = values
+    install_date, sensor_positions_f, first_sensor, depth = values
     sensor_positions = pd.read_csv(os.path.join(fs.data_root,sensor_positions_f)).squeeze()
     ec_depths_t0 = fs.chain_installation_depths(sensor_positions, first_sensor, depth)
     ec = subsurf_DataArray('ec%s'%ec_key, 'electrical_conductivity', 'microSiemens', r'EC\([0-9]+\)', 
