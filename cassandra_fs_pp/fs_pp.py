@@ -101,6 +101,11 @@ class fs():
             n += 1
 
         ds = pd.concat(store, axis=0)
+
+        # Check for entire columns of NANs and remove them
+        ds = ds.dropna(how='all', axis='columns')
+        # Delete any duplicates which have slipped in due to non-cleared MainTables
+        ds = ds.drop_duplicates()
         self.ds_level1 = ds
         return ds
 
@@ -136,13 +141,14 @@ class fs():
                 split = ds_config['subpath'].split('/')
                 if len(split) > 1:
                     subpath_root = os.path.join(*split[:-1])
-                    serviced_root = os.path.join(self.data_root, dataset, subpath_root, 'serviced')
-                    if os.path.exists(serviced_root):
-                        files = glob.glob(os.path.join(serviced_root, '*MainTable*'))
-                        if len(files) == 1:
-                            print('Found post-servicing dataset %s' %files[0])
-                            ds2 = self._load_level0_file(files[0], ds_load_opts)
-                            ds = pd.concat((ds, ds2), axis=0)
+
+            serviced_root = os.path.join(self.data_root, dataset, subpath_root, 'serviced')
+            if os.path.exists(serviced_root):
+                files = glob.glob(os.path.join(serviced_root, '*MainTable*'))
+                if len(files) == 1:
+                    print('Found post-servicing dataset %s' %files[0])
+                    ds2 = self._load_level0_file(files[0], ds_load_opts)
+                    ds = pd.concat((ds, ds2), axis=0)
 
         return ds
 
@@ -244,6 +250,7 @@ class fs():
         """
 
         data = pd.read_csv(filename, parse_dates=True, **load_opts)
+        data = data.drop_duplicates()
         return data
 
 
@@ -275,6 +282,8 @@ class fs():
         l2_ec = self._calibrate_ec()
         # df.assign() requires a dict of Series!
         level2 = level2.assign(**{c:l2_ec[c] for c in l2_ec.columns})
+
+        level2 = level2.drop_duplicates()
 
         # Set to object
         self.ds_level2 = level2
