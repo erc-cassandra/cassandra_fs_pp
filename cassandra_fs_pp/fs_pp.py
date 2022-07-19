@@ -141,6 +141,8 @@ class fs():
                 split = ds_config['subpath'].split('/')
                 if len(split) > 1:
                     subpath_root = os.path.join(*split[:-1])
+                else:
+                    subpath_root = ''
 
             serviced_root = os.path.join(self.data_root, dataset, subpath_root, 'serviced')
             if os.path.exists(serviced_root):
