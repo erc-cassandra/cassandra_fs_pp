@@ -11,11 +11,9 @@ import os
 import math
 import copy
 import argparse
+import datetime as dt
 
 import cassandra_fs_pp as fs_pp
-
-
-import pdb
 
 parser = argparse.ArgumentParser('Process level-1 data up to level-2 status.')
 
@@ -83,8 +81,8 @@ def subsurf_DataArray(sensor_type, name, units, pattern, sensors_info):
             '%s_install_depth' %sensor_type: ('%s_sensor' %sensor_type, list(sensors_info.values())),
         }
     )
-    if sensor_type == 'tdr':
-        arr.coords['tdr_depth'] = data_vars['TDR_Depth']
+    # if sensor_type == 'tdr':
+    #     arr.coords['tdr_depth'] = data_vars['TDR_Depth']
 
     arr.attrs['standard_name'] = name
     arr.attrs['units'] = units
@@ -99,9 +97,13 @@ for tdr in tdr_info.keys():
     if 'TDR%s_T(C)' %tdr in fs.ds_level2.columns:
         # Create a dict of TDR number : depth
         active_tdrs[int(tdr)] = tdr_info[tdr][1]
+        # Calculate time-varying depth of TDR
         depths.append(fs._calc_depth_tdr(tdr, udg_median))
-tdr_depths = pd.concat(depths, axis=1)
 
+# Create time-varying depth variable
+# However, we don't attach this as a coordinate to the TDR variables as it isn't
+# really valid - it probably contains NANs depending on UDG status, TDR status...
+tdr_depths = pd.concat(depths, axis=1)
 data_vars['TDR_Depth'] = xr.DataArray(
     tdr_depths, 
     dims=('time', 'tdr_sensor'),
@@ -123,7 +125,7 @@ data_vars['TDR_Perm'] = subsurf_DataArray('tdr', 'permittivity', '', r'TDR[0-9]\
 data_vars['TDR_VR'] = subsurf_DataArray('tdr', 'voltage_ratio', '', r'TDR[0-9]\_VR', active_tdrs)
 data_vars['TDR_Period'] = subsurf_DataArray('tdr', 'period', 'microseconds', r'TDR[0-9]\_Period', active_tdrs)
 
-#pdb.set_trace()
+
 #DTC
 for dtc_key, values in fs.config['level1_2']['dtc_info'].items():
     install_date, sensor_positions_f, first_sensor, depth = values
@@ -142,7 +144,7 @@ for ec_key, values in fs.config['level1_2']['ec_info'].items():
     ec_depths_t0 = fs.chain_installation_depths(sensor_positions, first_sensor, depth)
     ec = subsurf_DataArray('ec%s'%ec_key, 'electrical_conductivity', 'microSiemens', r'EC\([0-9]+\)', 
         ec_depths_t0)
-    data_vars['EC%s'%dtc_key] = dtc    
+    data_vars['EC%s'%dtc_key] = ec    
 
 
 ## -----------------------------------------------------------------------------
@@ -173,6 +175,7 @@ attrs = {
     'title':'Near-surface and sub-surface data from {site}, Greenland Ice Sheet'.format(site=fs.config['site']),
     'processing_level':'Level 2',
     'product_version': 'v1',
+    'processing_date': dt.datetime.now().isoformat("T","minutes"),
     'license':'Creative Commons Attribution 4.0 International (CC-BY-4.0) https://creativecommons.org/licenses/by/4.0',
     'latitude':fs.config['lat'],
     'longitude':fs.config['lon'],
@@ -191,5 +194,3 @@ for var in dataset.variables:
 # Write to netcdf
 dataset.to_netcdf(os.path.join(fs.data_root, 'firn_stations/level-2/%s.nc' %fs.config['site']),
     encoding=encoding, unlimited_dims=['time'])
-
-pdb.set_trace()
