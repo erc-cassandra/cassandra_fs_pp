@@ -15,6 +15,10 @@ import datetime as dt
 
 import cassandra_fs_pp as fs_pp
 
+#######
+version = 'v1'
+#######
+
 parser = argparse.ArgumentParser('Process level-1 data up to level-2 status.')
 
 parser.add_argument('site', type=str, help='Name of site, normally corresponding to TOML metadata file.')
@@ -174,7 +178,7 @@ attrs = {
     'institution': 'University of Fribourg, Switzerland',
     'title':'Near-surface and sub-surface data from {site}, Greenland Ice Sheet'.format(site=fs.config['site']),
     'processing_level':'Level 2',
-    'product_version': 'v1',
+    'product_version': version,
     'processing_date': dt.datetime.now().isoformat("T","minutes"),
     'license':'Creative Commons Attribution 4.0 International (CC-BY-4.0) https://creativecommons.org/licenses/by/4.0',
     'latitude':fs.config['lat'],
