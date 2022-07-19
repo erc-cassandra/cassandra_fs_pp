@@ -144,7 +144,7 @@ for ec_key, values in fs.config['level1_2']['ec_info'].items():
     ec_depths_t0 = fs.chain_installation_depths(sensor_positions, first_sensor, depth)
     ec = subsurf_DataArray('ec%s'%ec_key, 'electrical_conductivity', 'microSiemens', r'EC\([0-9]+\)', 
         ec_depths_t0)
-    data_vars['EC%s'%dtc_key] = ec    
+    data_vars['EC%s'%ec_key] = ec    
 
 
 ## -----------------------------------------------------------------------------
@@ -184,9 +184,8 @@ attrs = {
 
 dataset = xr.Dataset(data_vars=data_vars, attrs=attrs)
 
-exclude = ['time', 'tdr_sensor']
 for var in dataset.variables:
-    if var in exclude:
+    if var in dataset.coords: 
         continue
     encoding[var] = {'dtype':'int16', 'scale_factor':0.001, 'zlib':False, '_FillValue':-9999}
     #dataset[var].attrs['_FillValue'] = -999
