@@ -16,7 +16,7 @@ import datetime as dt
 import cassandra_fs_pp as fs_pp
 
 #######
-version = 'v1'
+version = 'v1.1'
 #######
 
 parser = argparse.ArgumentParser('Process level-1 data up to level-2 status.')
@@ -108,7 +108,7 @@ for tdr in tdr_info.keys():
 # However, we don't attach this as a coordinate to the TDR variables as it isn't
 # really valid - it probably contains NANs depending on UDG status, TDR status...
 tdr_depths = pd.concat(depths, axis=1)
-data_vars['TDR_Depth'] = xr.DataArray(
+data_vars['tdr_depth'] = xr.DataArray(
     tdr_depths, 
     dims=('time', 'tdr_sensor'),
     coords={
@@ -122,12 +122,12 @@ data_vars['TDR_Depth'] = xr.DataArray(
     }
 )
 
-data_vars['TDR_T'] = subsurf_DataArray('tdr', 'land_ice_temperature', 'degree_Celsius', r'TDR[0-9]\_T', active_tdrs)
-data_vars['TDR_EC'] = subsurf_DataArray('tdr', 'electrical_conductivity', 'dS/m', r'TDR[0-9]\_EC', active_tdrs)
-data_vars['TDR_VWC'] = subsurf_DataArray('tdr', 'volumetric_water_content', 'm^3/m^3', r'TDR[0-9]\_VWC', active_tdrs)
-data_vars['TDR_Perm'] = subsurf_DataArray('tdr', 'permittivity', '', r'TDR[0-9]\_Perm', active_tdrs)
-data_vars['TDR_VR'] = subsurf_DataArray('tdr', 'voltage_ratio', '', r'TDR[0-9]\_VR', active_tdrs)
-data_vars['TDR_Period'] = subsurf_DataArray('tdr', 'period', 'microseconds', r'TDR[0-9]\_Period', active_tdrs)
+data_vars['tdr_t'] = subsurf_DataArray('tdr', 'land_ice_temperature', 'degree_Celsius', r'TDR[0-9]\_T', active_tdrs)
+data_vars['tdr_ec'] = subsurf_DataArray('tdr', 'electrical_conductivity', 'dS/m', r'TDR[0-9]\_EC', active_tdrs)
+data_vars['tdr_vwc'] = subsurf_DataArray('tdr', 'volumetric_water_content', 'm^3/m^3', r'TDR[0-9]\_VWC', active_tdrs)
+data_vars['tdr_perm'] = subsurf_DataArray('tdr', 'permittivity', '', r'TDR[0-9]\_Perm', active_tdrs)
+data_vars['tdr_vr'] = subsurf_DataArray('tdr', 'voltage_ratio', '', r'TDR[0-9]\_VR', active_tdrs)
+data_vars['tdr_period'] = subsurf_DataArray('tdr', 'period', 'microseconds', r'TDR[0-9]\_Period', active_tdrs)
 
 
 #DTC
@@ -139,7 +139,7 @@ for dtc_key, values in fs.config['level1_2']['dtc_info'].items():
     # have been coiled at the surface.
     dtc = subsurf_DataArray('dtc%s'%dtc_key, 'land_ice_temperature', 'degree_Celsius', r'DTC%s_[0-9]+' %dtc_key, 
         dtc_depths_t0)
-    data_vars['DTC%s'%dtc_key] = dtc
+    data_vars['dtc%s'%dtc_key] = dtc
 
 # EC
 for ec_key, values in fs.config['level1_2']['ec_info'].items():
@@ -148,7 +148,7 @@ for ec_key, values in fs.config['level1_2']['ec_info'].items():
     ec_depths_t0 = fs.chain_installation_depths(sensor_positions, first_sensor, depth)
     ec = subsurf_DataArray('ec%s'%ec_key, 'electrical_conductivity', 'microSiemens', r'EC\([0-9]+\)', 
         ec_depths_t0)
-    data_vars['EC%s'%ec_key] = ec    
+    data_vars['ec%s'%ec_key] = ec    
 
 
 ## -----------------------------------------------------------------------------
@@ -171,12 +171,13 @@ data_vars['batt'] = surf_DataArray('battery_minimum', 'volts', 'BattV_Min')
 # ------------------------------------------------------------------------------
 ## Create xarray Dataset
 attrs = {
+    'site_id': fs.config['site'],
+    'title': 'Near-surface and sub-surface data from {site}, Greenland Ice Sheet'.format(site=fs.config['site']),
+    'institution': 'University of Fribourg, Switzerland',
     'creator_name': 'Andrew Tedstone',
     'creator_email': 'andrew.tedstone@unifr.ch',
     'contributors': 'Horst Machguth, Nicole Clerx, Nicolas Jullien',
     'source': 'https://www.github.com/erc-cassandra/cassandra_fs_pp/bin/fs_process_l2.py',
-    'institution': 'University of Fribourg, Switzerland',
-    'title':'Near-surface and sub-surface data from {site}, Greenland Ice Sheet'.format(site=fs.config['site']),
     'processing_level':'Level 2',
     'product_version': version,
     'processing_date': dt.datetime.now().isoformat("T","minutes"),
@@ -191,7 +192,7 @@ dataset = xr.Dataset(data_vars=data_vars, attrs=attrs)
 for var in dataset.variables:
     if var in dataset.coords: 
         continue
-    encoding[var] = {'dtype':'int16', 'scale_factor':0.001, 'zlib':False, '_FillValue':-9999}
+    encoding[var] = {'dtype':'int32', 'scale_factor':0.001, 'zlib':False, '_FillValue':-9999}
     #dataset[var].attrs['_FillValue'] = -999
 
 # Write to netcdf
