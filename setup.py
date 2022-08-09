@@ -46,7 +46,7 @@ setup(
     license="BSD-3",
     packages=["cassandra_fs_pp"],
     install_requires=["pandas", "xarray"],
-    scripts=["bin/fs_process_l1.py", "bin/fs_process_l2.py"],
+    scripts=["bin/fs_process_l1.py", "bin/fs_process_l2.py", "bin/plot_L2.py"],
     zip_safe=False,
     classifiers=[
         "Programming Language :: Python :: 3",
