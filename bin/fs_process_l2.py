@@ -65,6 +65,8 @@ fs.ds_level1.index.name = 'time'
 # Convert the data to level-2 format.
 fs.level1_to_level2()
 
+fs.ds_level2.to_csv(os.path.join(fs.data_root, 'firn_stations/level-2/%s.csv' %fs.config['site']))
+
 # Smooth the UDG record for calculating depths
 udg_median = fs.ds_level2['TCDT(m)'].rolling('3D', center=True).median()
 udg_median_xr = xr.DataArray(udg_median, dims=['time'])
@@ -127,7 +129,7 @@ data_vars['tdr_ec'] = subsurf_DataArray('tdr', 'electrical_conductivity', 'dS/m'
 data_vars['tdr_vwc'] = subsurf_DataArray('tdr', 'volumetric_water_content', 'm^3/m^3', r'TDR[0-9]\_VWC', active_tdrs)
 data_vars['tdr_perm'] = subsurf_DataArray('tdr', 'permittivity', '', r'TDR[0-9]\_Perm', active_tdrs)
 data_vars['tdr_vr'] = subsurf_DataArray('tdr', 'voltage_ratio', '', r'TDR[0-9]\_VR', active_tdrs)
-data_vars['tdr_period'] = subsurf_DataArray('tdr', 'period', 'microseconds', r'TDR[0-9]\_Period', active_tdrs)
+data_vars['tdr_period'] = subsurf_DataArray('tdr', 'period', 'micro_seconds', r'TDR[0-9]\_Period', active_tdrs)
 
 
 #DTC
@@ -176,7 +178,7 @@ attrs = {
     'institution': 'University of Fribourg, Switzerland',
     'creator_name': 'Andrew Tedstone',
     'creator_email': 'andrew.tedstone@unifr.ch',
-    'contributors': 'Horst Machguth, Nicole Clerx, Nicolas Jullien',
+    'contributors': 'Horst Machguth, Nicole Clerx, Nicolas Jullien, Hannah Picton',
     'source': 'https://www.github.com/erc-cassandra/cassandra_fs_pp/bin/fs_process_l2.py',
     'processing_level':'Level 2',
     'product_version': version,

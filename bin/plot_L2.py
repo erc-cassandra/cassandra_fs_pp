@@ -26,12 +26,12 @@ if __name__ == '__main__':
 
     p.add_argument('-start', default=None,
         type=lambda v: dt.datetime.strptime(v, '%Y-%m-%d'),
-        help='Constrain the time range of each figure to the specified start and finish dates. Use the year-first format, e.g. 2022-06-30.'
+        help='Constrain the time range of each figure to the specified start and finish dates. Use the year-first format, e.g. 2022-06-30. Must be used in conjunction with -finish.'
     )
 
     p.add_argument('-finish', default=None,
         type=lambda v: dt.datetime.strptime(v, '%Y-%m-%d'),
-        help='Constrain the time range of each figure to the specified start and finish dates. Use the year-first format, e.g. 2022-06-30.'
+        help='Constrain the time range of each figure to the specified start and finish dates. Use the year-first format, e.g. 2022-06-30. Must be used in conjunction with -start.'
     )
 
     args = p.parse_args()
@@ -92,11 +92,8 @@ if __name__ == '__main__':
                 **tdr_vars[item], label=int(sensor.values))
         
         plt.colorbar()
+        plt.ylabel(data['tdr_depth'].attrs['units'])
 
-        try:
-            plt.ylabel(data[var_name].attrs['units'])   
-        except KeyError:
-            pass
         style_common(ax, 'Time Domain Reflectometry', sname)
         plt.savefig(os.path.join(args.outpath, '{site}_tdr_{item}_depth{t}.png'.format(site=args.site, item=item, t=tstr)), dpi=300)
 

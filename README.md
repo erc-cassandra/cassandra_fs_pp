@@ -62,9 +62,9 @@ terminal line, then execute the scripts there.
     - add the latest level-0 dataset(s)
     - add new UDG position if it was changed
     - add any new TDRs
-    - if a new TDR replaces an old one, note the new installation date and depth
-3. Run `fs_process_l1.py <site>`. This is silent, producing a Level-1 CSV file.
-4. Run `fs_process_l2.py <site>`. This is silent, producing a Level-2 NetCDF file.
+    - if a new TDR replaces an old one (not recommended!), note the new installation date and depth
+3. Run `fs_process_l1.py <site>`. This is almost-silent, producing a Level-1 CSV file.
+4. Run `fs_process_l2.py <site>`. This is almost-silent, producing a Level-2 NetCDF file.
 
 
 ## Data levels
@@ -83,8 +83,9 @@ generally one bale per station visit.
 
 ### Level-1
 
-Data from station has been concatentated into a single continuous file. Column
-names have been renamed.
+* Data from station are concatentated into a single continuous file. 
+* Column names get renamed.
+* Duplicated data are removed. The number of rows removed are listed in the terminal window.
 
 These data are output to csv files.
 
@@ -94,6 +95,8 @@ These data are output to csv files.
 Sensor burial depths are derived and added to this level of data.
 
 Electrical conductivity chains are converted to micro-siemens.
+
+Data falling outside valid bounds are set to NaN.
 
 These data are output to NetCDF files. Note that various metadata are appended
 to the NetCDF files; to change these settings make edits directly to `bin/fs_process_l2.py`.

@@ -104,8 +104,15 @@ class fs():
 
         # Check for entire columns of NANs and remove them
         ds = ds.dropna(how='all', axis='columns')
+
+        # Checking for duplicates...
+        print('%s records before removal of duplicates' %len(ds))
         # Delete any duplicates which have slipped in due to non-cleared MainTables
         ds = ds.drop_duplicates()
+        print('%s records after duplicated rows dropped' %len(ds))
+        # Delete any temporal duplicates
+        ds = ds[~ds.index.duplicated()]
+        print('%s records after duplicated indexes dropped' %len(ds))
         self.ds_level1 = ds
         return ds
 
@@ -230,11 +237,19 @@ class fs():
         """
 
         args = {}
+
+        # 'Universal' options which always need to be set
         for key in ["skiprows", "header", "index_col", "na_values", "sep"]:
             args[key] = self.config['level0_1'][key]
             if dataset is not None:
                 if key in self.config['level0'][dataset].keys():
                     args[key] = self.config['level0'][dataset][key]
+
+        # Specific options which may be set for individual datasets
+        if dataset is not None:
+            for key in ["nrows"]:
+                if key in self.config['level0'][dataset].keys():
+                        args[key] = self.config['level0'][dataset][key]
 
         return args
 
@@ -267,6 +282,8 @@ class fs():
         # Start with a copy of level1 ds
         level2 = copy.copy(self.ds_level1)
 
+        level2 = self._apply_valid_data_ranges(level2)
+
         # Delete unwanted columns
         for c in self.config['level1_2']['remove_columns']:
             level2 = level2.drop(c, axis='columns')
@@ -297,6 +314,35 @@ class fs():
         Default location of level-2 dataset.
         """
         return os.path.join(self.data_root, 'firn_stations/level-2', self.config['site'] + '.nc')
+
+
+    def _apply_valid_data_ranges(
+        self,
+        df : pd.DataFrame,
+        spec_file : str | None=None,
+        ) -> pd.DataFrame:
+
+        if spec_file is None:
+            _module_path = os.path.dirname(__file__)
+            spec_file = os.path.join(_module_path, 'valid_data_ranges.toml')
+
+        with open(spec_file, "rb") as f:
+            spec = tomli.load(f)
+    
+        print('Restricting to valid data ranges...')
+        for col in spec:
+            if col[0:3].upper() == 'TDR':
+                var = col[4:]
+                cs = df.filter(regex='TDR[0-9]*\_%s'%var).columns
+            else:
+                cs = [col]
+            vmin, vmax = spec[col]    
+            for c in cs:
+                print('    %s (%s, %s)'%(c, vmin, vmax))
+                df.loc[:,c] = df.loc[:,c].where(df.loc[:,c] <= vmax)
+                df.loc[:,c] = df.loc[:,c].where(df.loc[:,c] >= vmin)
+
+        return df
 
 
     def _define_l2_column_names(
@@ -434,11 +480,14 @@ class fs():
             if change == -999:
                 break
             date, new_height = change
+            # In here we need to index with 'inexact' strings rather than Timestamps,
+            # which are always treated as exact, so cause this operation to fail if the precise
+            # Timestamp is not an index in the DataFrame.
             if next_change is None or next_change == -999:
-                udg.loc[date:] -= new_height
+                udg.loc[date.isoformat():] -= new_height
             else:
                 next_date, next_height = next_change
-                udg.loc[date:next_date] -= new_height
+                udg.loc[date.isoformat():next_date.isoformat()] -= new_height
 
         return udg
 
@@ -446,19 +495,21 @@ class fs():
     def _filter_udg(
         self,
         udg : pd.Series | None=None,
-        med_window : str='1D',
-        threshold : float=0.1
+        q : pd.Series | None=None,
+        med_window : str='2D',
+        threshold : float=0.2
         ) -> pd.Series:
         """
         Apply filtering strategies to UDG: remove Campbell Sci bad values and
-        do temporal median filtering.
+        use temporal median filtering to identify and remove other bad values.
 
-        Always relies on 'Q' column of self.ds_level1.
+        No data modification!
 
         Note that the UDG record is likely to benefit from further smoothing,
         depending on the desired application.
 
         :param udg: Series of UDG values. If not provided defaults to self.ds_level1.
+        :param q: Series of UDG quality values. If not provided defaults to self.ds_level1.
         :param med_window: temporal window over which to calculate rolling median.
         :param threshold: absolute difference from median to tolerate.
 
@@ -467,12 +518,34 @@ class fs():
             udg_key = self.config['level0_1']['udg_key']
             udg = copy.deepcopy(self.ds_level1[udg_key])
 
+        if q is None:
+            q_key = 'Q'
+            q = copy.deepcopy(self.ds_level1[q_key])
+        else:
+            q = copy.deepcopy(q)
+
+        q_nans = np.sum(q.isna())
+        if q_nans > 0:
+            print('Warning : %s NaNs found in UDG Q column, indicating no Q value recorded. Quality checks will not be made on these UDG rows.' %q_nans)
+            q = np.where(np.isnan(q), 150, q)
+
         # Only retain data with quality flag according to SR50A manual
-        udg = udg.where(self.ds_level1['Q'] > 150).where(self.ds_level1['Q'] <= 210)
+        udg = udg.where(q >= 150).where(q <= 210)
+
+        # Interpolate to make the Series monotonic - primarily needed due to 
+        # different sampling rates in summer versus winter.
+        # First calculate most likely appropriate frequency in minutes
+        r = (udg.index[1:] - udg.index[0:-1])
+        freq = pd.DataFrame(r).mode().iloc[0,0].total_seconds() / 60
+        udg_reg = udg.resample('%smin'%freq).ffill()
+
         # Remove high-frequency "problems"
-        med = udg.rolling(med_window).median()
-        filt = udg.where(np.abs(med-udg) < threshold)
-        return filt
+        med = udg_reg.rolling(med_window).median()
+        filt = udg_reg.where(np.abs(med-udg_reg) < threshold)
+
+        # Revert to original sampling frequency
+        filt_orig_freq = filt[udg.index]
+        return filt_orig_freq
 
 
     def _calibrate_ec(
