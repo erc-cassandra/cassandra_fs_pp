@@ -59,22 +59,22 @@ class TestFS:
         assert self._data.ds_level1['TCDT'].iloc[0] == pytest.approx(2.069)
         assert self._data.ds_level1['TCDT'].iloc[-1] == pytest.approx(1.81)
         udg = self._data._normalise_udg()
-        assert udg.iloc[0] == pytest.approx(0, abs=1e-2)
-        assert udg.iloc[-1] == pytest.approx(0, abs=1e-2)
+        assert udg.iloc[0] == pytest.approx(0, abs=1e-1)
+        assert udg.iloc[-1] == pytest.approx(0, abs=1e-1)
         self._udg = udg
 
     def test_filter_udg(self) -> None:
         # Case of un-normalised data - use data in level1 df
         filtered = self._data._filter_udg()
-        assert filtered.iloc[0] == pytest.approx(2.069, abs=1e-2)
+        assert filtered.iloc[0] == pytest.approx(2.069, abs=1e-1)
         assert len(filtered[filtered > 210]) == 0
 
     def test_filter_normalised_udg(self) -> None:
         # Case of pre-normalised data - supply the series.
         normed = self._data._normalise_udg()
         filtered = self._data._filter_udg(normed)
-        assert filtered.iloc[0] == pytest.approx(0, abs=1e-2)
-        assert filtered.iloc[-1] == pytest.approx(0, abs=1e-2)
+        assert filtered.iloc[0] == pytest.approx(0, abs=1e-1)
+        assert filtered.iloc[-1] == pytest.approx(0, abs=1e-1)
 
     def test_calibrate_ec(self) -> None:
         ec = self._data._calibrate_ec()

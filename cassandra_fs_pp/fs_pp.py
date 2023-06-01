@@ -470,24 +470,48 @@ class fs():
         if udg is None:
             udg_key = self.config['level0_1']['udg_key']
             udg = copy.deepcopy(self.ds_level1[udg_key])
+        else:
+            udg = copy.deepcopy(udg)
 
         changes = self.config['level1_2']['udg_to_surface']
         if len(changes) == 1:
             changes.append(-999)
         changes_it = pairwise(changes)
 
+        print('Normalising UDG ...')
+        first = True
         for change, next_change in changes_it:
             if change == -999:
                 break
             date, new_height = change
+
+            if first:
+                # This date is when UDG was installed for first time. Zero-off.
+                height_change = new_height
+                print('\t %s: Normalising to height (%s m) at first installation.' %(date, height_change))
+            else:
+                # These dates denote when the UDG installation height was changed.
+                # This doesn't actually need the user-provided 'new' installation heights -
+                # instead we correct for this 'automatically' using only the UDG data.
+                period_before_change_start = date - pd.Timedelta(days=1)
+                period_before_change_end = date - pd.Timedelta(hours=4)
+                udg_height_before_change = np.round(udg.loc[period_before_change_start:period_before_change_end].median(), 2)
+                udg_height_after_change = np.round(udg.loc[date.isoformat():(date+pd.Timedelta(days=1)).isoformat()].median(), 2)
+                height_change = np.round(udg_height_after_change - udg_height_before_change, 2)
+                print('\t %s: Normalised height, pre-change: %s m. New unnormalised height: %s m. Subtracting %s m.' %(date, udg_height_before_change, udg_height_after_change, height_change))
+            
             # In here we need to index with 'inexact' strings rather than Timestamps,
             # which are always treated as exact, so cause this operation to fail if the precise
             # Timestamp is not an index in the DataFrame.
             if next_change is None or next_change == -999:
-                udg.loc[date.isoformat():] -= new_height
+                udg.loc[date.isoformat():] -= height_change#new_height
             else:
                 next_date, next_height = next_change
-                udg.loc[date.isoformat():next_date.isoformat()] -= new_height
+                udg.loc[date.isoformat():next_date.isoformat()] -= height_change
+
+            actual_start_date = udg.loc[date.isoformat():].index[0]
+            
+            first = False
 
         return udg
 
@@ -526,7 +550,7 @@ class fs():
 
         q_nans = np.sum(q.isna())
         if q_nans > 0:
-            print('Warning : %s NaNs found in UDG Q column, indicating no Q value recorded. Quality checks will not be made on these UDG rows.' %q_nans)
+            print('WARNING: %s NaNs found in UDG Q column, indicating no Q value recorded. Quality checks will not be made on these UDG rows.' %q_nans)
             q = np.where(np.isnan(q), 150, q)
 
         # Only retain data with quality flag according to SR50A manual
@@ -598,8 +622,14 @@ class fs():
         """
         
         install_date, install_depth = self.config['level1_2']['tdr_info'][str(tdr)]
+        
+        udg_at_install = float(udg.loc[install_date.isoformat():].iloc[0])
+        nearest_udg_date = udg.loc[install_date.isoformat():].index[0]
+        if nearest_udg_date != pd.Timestamp(install_date):
+            print('WARNING: TDR %s depth calculation: No UDG data available at \
+specified installation date of %s, using next record (%s) instead.'%(tdr, install_date, nearest_udg_date))
 
-        offset = float(udg.loc[install_date.strftime('%Y-%m-%d')][0]) - install_depth
+        offset =  - install_depth
 
         udg = udg.loc[install_date:]
 
