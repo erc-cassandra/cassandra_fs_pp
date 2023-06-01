@@ -1,0 +1,18 @@
+# Valid data ranges. 
+# Format: level1_column_name=[minimum,maximum]
+# Provide values in the same units as the recorded data.
+
+# To do: may be better to change to level2 column names, to enable wildcard matching for TDR valid ranges.
+# n.b. level2 names are not the same as netcdf export standard names !
+# level2 names are nust regex for array-type variables
+# export level2 in csv as well as netcdf? (kind of a level1.5 really)
+
+T107_C=[-50,10]   # Expected range
+TDR_EC=[0,8]      # From CS655 manual
+TDR_T=[-50,10]    # From manual, Expected range
+TDR_VWC=[0,1]     # From manual
+TDR_Perm=[1,81]   # From manual
+
+#EC=[0.5,1]        # Guess, lower end
+
+
