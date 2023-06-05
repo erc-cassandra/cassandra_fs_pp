@@ -65,7 +65,7 @@ terminal line, then execute the scripts there.
     - if a new TDR replaces an old one (not recommended!), note the new installation date and depth
 3. Run `fs_process_l1.py <site>`. This is almost-silent, producing a Level-1 CSV file.
 4. Run `fs_process_l2.py <site>`. This is almost-silent, producing a Level-2 NetCDF file.
-
+5. Use `plot_L2.py` to inspect the Level-2 data set. This is command-line tool, see the options available e.g. to constrain to specific time ranges. It produces PNGs of all sensor time series in the dataset.
 
 ## Data levels
 
