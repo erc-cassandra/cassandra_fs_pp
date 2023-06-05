@@ -25,7 +25,9 @@ sep=','
 
 # Distance from bottom of UDG rim to surface
 # Add a new row when UDG position changes (e.g. pole extension).
-udg_to_surface=[[2021-04-30, 2.06], [2021-05-02T22:00:00, 1.81]]
+#udg_to_surface=[[2021-04-30, 2.06], [2021-05-02T22:00:00, 1.81]]
+
+udg_height_change=[[2021-04-30, 2.06], [2021-05-02T22:00:00]]
 
 # Columns in Level-1 that should be removed from Level-2.
 remove_columns=["RECORD", "PTemp_C_Min", "DT"]
