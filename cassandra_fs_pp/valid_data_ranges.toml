@@ -13,6 +13,6 @@ TDR_T=[-50,10]    # From manual, Expected range
 TDR_VWC=[0,1]     # From manual
 TDR_Perm=[1,81]   # From manual
 
-#EC=[0.5,1]        # Guess, lower end
+EC=[0.5,1]        # Guess, lower end - still in mV!
 
 

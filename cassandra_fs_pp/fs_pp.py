@@ -20,17 +20,6 @@ REQUIRED_CONFIG_KEYS = ['site']
 REQUIRED_CONFIG_L0_KEYS = ['header', 'skiprows', 'index_col']
 
 
-def pairwise(lst):
-    """ yield item i and item i+1 in lst. e.g.
-        (lst[0], lst[1]), (lst[1], lst[2]), ..., (lst[-1], None)
-    """
-    if not lst: return
-    #yield None, lst[0]
-    for i in range(len(lst)-1):
-        yield lst[i], lst[i+1]
-    yield lst[-1], None
-
-
 class fs():
     
     config = None
@@ -278,11 +267,12 @@ class fs():
         Process Level-1 data to Level-2
         """
 
+        # Apply data ranges directly to level1 (not level2)
+        self.ds_level1 = self._apply_valid_data_ranges(self.ds_level1)
+
         # Apply modifications to dataframe
         # Start with a copy of level1 ds
         level2 = copy.copy(self.ds_level1)
-
-        level2 = self._apply_valid_data_ranges(level2)
 
         # Delete unwanted columns
         for c in self.config['level1_2']['remove_columns']:
@@ -334,6 +324,8 @@ class fs():
             if col[0:3].upper() == 'TDR':
                 var = col[4:]
                 cs = df.filter(regex='TDR[0-9]*\_%s'%var).columns
+            elif col[0:2].upper() == 'EC':
+                cs = df.filter(regex='EC\([0-9]*\)').columns
             else:
                 cs = [col]
             vmin, vmax = spec[col]    
@@ -473,42 +465,45 @@ class fs():
         else:
             udg = copy.deepcopy(udg)
 
-        changes = self.config['level1_2']['udg_to_surface']
+        changes = self.config['level1_2']['udg_height_change']
         if len(changes) == 1:
             changes.append(-999)
-        changes_it = pairwise(changes)
 
         print('Normalising UDG ...')
         first = True
-        for change, next_change in changes_it:
+        for change in changes:
             if change == -999:
                 break
-            date, new_height = change
+
+            if len(change) == 2:
+                date, user_height_change = change
+            else:
+                date = change[0]
+                user_height_change = np.nan
 
             if first:
                 # This date is when UDG was installed for first time. Zero-off.
-                height_change = new_height
+                height_change = user_height_change
                 print('\t %s: Normalising to height (%s m) at first installation.' %(date, height_change))
             else:
-                # These dates denote when the UDG installation height was changed.
-                # This doesn't actually need the user-provided 'new' installation heights -
-                # instead we correct for this 'automatically' using only the UDG data.
-                period_before_change_start = date - pd.Timedelta(days=1)
-                period_before_change_end = date - pd.Timedelta(hours=4)
-                udg_height_before_change = np.round(udg.loc[period_before_change_start:period_before_change_end].median(), 2)
-                udg_height_after_change = np.round(udg.loc[date.isoformat():(date+pd.Timedelta(days=1)).isoformat()].median(), 2)
-                height_change = np.round(udg_height_after_change - udg_height_before_change, 2)
-                print('\t %s: Normalised height, pre-change: %s m. New unnormalised height: %s m. Subtracting %s m.' %(date, udg_height_before_change, udg_height_after_change, height_change))
+                if np.isnan(user_height_change):
+                    # These dates denote when the UDG installation height was changed.
+                    # We correct for this 'automatically' using only the UDG data.
+                    period_before_change_start = date - pd.Timedelta(days=1)
+                    period_before_change_end = date - pd.Timedelta(hours=4)
+                    udg_height_before_change = np.round(udg.loc[period_before_change_start:period_before_change_end].median(), 2)
+                    udg_height_after_change = np.round(udg.loc[date.isoformat():(date+pd.Timedelta(days=1)).isoformat()].median(), 2)
+                    height_change = np.round(udg_height_after_change - udg_height_before_change, 2)
+                    print('\t %s: Normalised height, pre-change: %s m. New unnormalised height: %s m. Subtracting %s m.' %(date, udg_height_before_change, udg_height_after_change, height_change))
+                else:
+                    height_change = user_height_change
+                    print('\t %s: Applying user-provided height change of %s.' %(date, height_change))
             
             # In here we need to index with 'inexact' strings rather than Timestamps,
             # which are always treated as exact, so cause this operation to fail if the precise
             # Timestamp is not an index in the DataFrame.
-            if next_change is None or next_change == -999:
-                udg.loc[date.isoformat():] -= height_change#new_height
-            else:
-                next_date, next_height = next_change
-                udg.loc[date.isoformat():next_date.isoformat()] -= height_change
-
+            udg.loc[date.isoformat():] -= height_change
+            
             actual_start_date = udg.loc[date.isoformat():].index[0]
             
             first = False
@@ -521,7 +516,7 @@ class fs():
         udg : pd.Series | None=None,
         q : pd.Series | None=None,
         med_window : str='2D',
-        threshold : float=0.2
+        threshold : float=0.5
         ) -> pd.Series:
         """
         Apply filtering strategies to UDG: remove Campbell Sci bad values and
@@ -561,12 +556,12 @@ class fs():
         # First calculate most likely appropriate frequency in minutes
         r = (udg.index[1:] - udg.index[0:-1])
         freq = pd.DataFrame(r).mode().iloc[0,0].total_seconds() / 60
-        udg_reg = udg.resample('%smin'%freq).ffill()
+        udg_reg = udg.resample('%smin'%freq).ffill(limit=3)
 
         # Remove high-frequency "problems"
         med = udg_reg.rolling(med_window).median()
         filt = udg_reg.where(np.abs(med-udg_reg) < threshold)
-
+ 
         # Revert to original sampling frequency
         filt_orig_freq = filt[udg.index]
         return filt_orig_freq
