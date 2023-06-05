@@ -161,7 +161,8 @@ if __name__ == '__main__':
 
         data[item].plot(ax=ax, marker='.', linestyle='-', markersize=3, color='lightblue', alpha=0.5)
         as_pd = data[item].to_pandas()
-        as_pd.interpolate().rolling('24H').mean().plot(label='24H rolling', color='tab:blue', linewidth=2, alpha=0.9)
+        # there was an interpolate() in here
+        as_pd.rolling('24H', min_periods=10, center=True).median().plot(label='24H rolling', color='tab:blue', linewidth=2, alpha=0.9)
 
         style_common(ax, item_title, sname)
 
