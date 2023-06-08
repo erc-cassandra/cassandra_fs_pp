@@ -624,15 +624,19 @@ class fs():
             print('WARNING: TDR %s depth calculation: No UDG data available at \
 specified installation date of %s, using next record (%s) instead.'%(tdr, install_date, nearest_udg_date))
 
-        offset =  - install_depth
+        offset =  install_depth 
 
-        udg = udg.loc[install_date:]
-
+        # Select UDG data, starting at install date, and normalise the record 
+        # relative to the installation reading
+        udg = udg.loc[install_date:] - udg_at_install
+        # Now, +ve UDG means net surface melting compared to installation
+        # And -ve UDG means net surface accumulation compared to installation
+        
         D = []
         for ix,udgt in udg.iteritems():
-            Dt = udgt - offset
+            Dt = udgt + offset
             Dt = np.minimum(0, Dt)
-            offset = np.where(Dt == 0, udgt, offset)
+            offset = np.where(Dt == 0, (udgt*-1), offset)
             D.append(Dt)
 
         DD = np.array(D)
