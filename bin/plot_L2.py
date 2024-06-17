@@ -73,7 +73,7 @@ if __name__ == '__main__':
         'period': dict(vmin=0, vmax=3000),
         'vr': dict(vmin=0.99, vmax=1.01)
     }
-    for item in ['vwc', 'ec', 't', 'perm', 'period', 'vr']:
+    for item in ['ec', 't', 'perm', 'period', 'vr']: #vwc removed 2024-06-17 AJT
 
         print('TDRs: %s ...' %item)
 
