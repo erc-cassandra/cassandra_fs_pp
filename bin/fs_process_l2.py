@@ -99,6 +99,7 @@ tdr_info = fs.config['level1_2']['tdr_info']
 
 active_tdrs = {}
 depths = []
+tdr_data = []
 for tdr in tdr_info.keys():
     if 'TDR%s_T(C)' %tdr in fs.ds_level2.columns:
         # Create a dict of TDR number : depth
@@ -124,12 +125,13 @@ data_vars['tdr_depth'] = xr.DataArray(
     }
 )
 
-data_vars['tdr_t'] = subsurf_DataArray('tdr', 'land_ice_temperature', 'degree_Celsius', r'TDR[0-9]\_T', active_tdrs)
-data_vars['tdr_ec'] = subsurf_DataArray('tdr', 'electrical_conductivity', 'dS/m', r'TDR[0-9]\_EC', active_tdrs)
-data_vars['tdr_vwc'] = subsurf_DataArray('tdr', 'volumetric_water_content', 'm^3/m^3', r'TDR[0-9]\_VWC', active_tdrs)
-data_vars['tdr_perm'] = subsurf_DataArray('tdr', 'permittivity', '', r'TDR[0-9]\_Perm', active_tdrs)
-data_vars['tdr_vr'] = subsurf_DataArray('tdr', 'voltage_ratio', '', r'TDR[0-9]\_VR', active_tdrs)
-data_vars['tdr_period'] = subsurf_DataArray('tdr', 'period', 'micro_seconds', r'TDR[0-9]\_Period', active_tdrs)
+last_tdr = np.max(list(active_tdrs.keys()))
+data_vars['tdr_t'] = subsurf_DataArray('tdr', 'land_ice_temperature', 'degree_Celsius', r'TDR[0-%s]\_T' %last_tdr, active_tdrs)
+data_vars['tdr_ec'] = subsurf_DataArray('tdr', 'bulk_electrical_conductivity', 'dS/m', r'TDR[0-%s]\_EC' %last_tdr, active_tdrs)
+#data_vars['tdr_vwc'] = subsurf_DataArray('tdr', 'volumetric_water_content', 'm^3/m^3', r'TDR[0-9]\_VWC', active_tdrs)
+data_vars['tdr_perm'] = subsurf_DataArray('tdr', 'permittivity', '', r'TDR[0-%s]\_Perm' %last_tdr, active_tdrs)
+data_vars['tdr_vr'] = subsurf_DataArray('tdr', 'voltage_ratio', '', r'TDR[0-%s]\_VR' %last_tdr, active_tdrs)
+data_vars['tdr_period'] = subsurf_DataArray('tdr', 'period', 'micro_seconds', r'TDR[0-%s]\_Period' %last_tdr, active_tdrs)
 
 
 #DTC
