@@ -616,7 +616,7 @@ class fs():
         """ Calculate depth of single TDR
         """
         
-        install_date, install_depth = self.config['level1_2']['tdr_info'][str(tdr)]
+        install_date, install_depth, _ = self.config['level1_2']['tdr_info'][str(tdr)]
         
         udg_at_install = float(udg.loc[install_date.isoformat():].iloc[0])
         nearest_udg_date = udg.loc[install_date.isoformat():].index[0]
